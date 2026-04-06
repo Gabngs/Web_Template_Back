@@ -1,0 +1,29 @@
+<?php
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+abstract class Base{{ modelName }}Request extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function messages(): array
+    {
+        return [
+{% for field in fields %}
+{% if not field.nullable | default(true) %}
+            '{{ field.name }}.required' => 'El campo {{ field.name }} es obligatorio.',
+{% endif %}
+{% if field.length %}
+            '{{ field.name }}.max' => 'El campo {{ field.name }} no puede superar {{ field.length }} caracteres.',
+{% endif %}
+{% if field.unique %}
+            '{{ field.name }}.unique' => 'El valor de {{ field.name }} ya está registrado.',
+{% endif %}
+{% endfor %}
+        ];
+    }
+}

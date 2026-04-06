@@ -1,0 +1,20 @@
+<?php
+namespace App\Http\Requests;
+
+class Update{{ modelName }}Request extends Base{{ modelName }}Request
+{
+    public function rules(): array
+    {
+        $id = $this->route('{{ modelNameLower }}')?->id;
+
+        return [
+{% for field in fields %}
+{% if field.unique %}
+            '{{ field.name }}' => ['sometimes', 'required', "unique:{{ tableName }},{{ field.name }},{$id}"],
+{% else %}
+            '{{ field.name }}' => ['sometimes', {{ field | val_rules | replace("[", "") | replace("]", "") }}],
+{% endif %}
+{% endfor %}
+        ];
+    }
+}

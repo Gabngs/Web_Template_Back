@@ -1,0 +1,36 @@
+<?php
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('{{ tableName }}', function (Blueprint $table) {
+{% if usesUuid %}
+            $table->unsignedBigInteger('pkid')->autoIncrement();
+            $table->uuid('id')->unique();
+{% else %}
+            $table->id();
+{% endif %}
+{% for field in fields %}
+            {{ field | mig_type }}
+{% endfor %}
+{% if usesAudit %}
+            $table->unsignedBigInteger('created_by_id')->nullable();
+            $table->unsignedBigInteger('updated_by_id')->nullable();
+            $table->unsignedBigInteger('deleted_by_id')->nullable();
+{% endif %}
+            $table->timestamps();
+{% if usesSoftDeletes %}
+            $table->softDeletes();
+{% endif %}
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('{{ tableName }}');
+    }
+};

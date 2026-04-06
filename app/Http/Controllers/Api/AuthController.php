@@ -8,7 +8,20 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 /**
- * @OA\Tag(name="Auth", description="Autenticación con tokens dinámicos Sanctum")
+ * @OA\Info(
+ *     title="Web Template API",
+ *     version="1.0.0",
+ *     description="API base del Web Template. Clona este proyecto para nuevos proyectos."
+ * )
+ * @OA\Server(url=L5_SWAGGER_CONST_HOST, description="Servidor actual")
+ * @OA\SecurityScheme(
+ *     securityScheme="sanctum",
+ *     type="http",
+ *     scheme="bearer",
+ *     bearerFormat="JWT",
+ *     description="Token Bearer obtenido desde POST /api/auth/login"
+ * )
+ * @OA\Tag(name="Auth", description="Autenticación con tokens Bearer Sanctum")
  */
 class AuthController extends Controller
 {
@@ -64,12 +77,14 @@ class AuthController extends Controller
         }
 
         $user->tokens()->delete();
-        $token = $user->createToken('api-token', ['*'], now()->addDay());
+        $minutes    = (int) config('sanctum.expiration', 360);
+        $expiresAt  = now()->addMinutes($minutes);
+        $token      = $user->createToken('api-token', ['*'], $expiresAt);
 
         return response()->json([
             'access_token' => $token->plainTextToken,
             'token_type'   => 'Bearer',
-            'expires_in'   => 86400,
+            'expires_in'   => $minutes * 60,
             'user'         => [
                 'id'    => $user->id,
                 'name'  => $user->name,
@@ -115,9 +130,7 @@ class AuthController extends Controller
     {
         $user = $request->user()->load('roles.permissions');
 
-        $permissions = $user->roles->flatMap(function ($role) {
-            return $role->permissions->pluck('name');
-        })->unique()->values();
+        $permissions = $user->roles->flatMap(fn($role) => $role->permissions->pluck('name'))->unique()->values();
 
         return response()->json([
             'user'        => $user->only(['id', 'name', 'email', 'avatar', 'is_active']),

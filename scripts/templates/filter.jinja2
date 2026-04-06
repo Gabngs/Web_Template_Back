@@ -1,0 +1,98 @@
+<?php
+namespace App\Filters;
+
+class {{ modelName }}Filter extends QueryFilter
+{
+    protected array $allowedFilters = [
+        // Campos de negocio
+{% for field in fields %}
+{% if field.type in ['string', 'text'] %}
+        '{{ field.name }}',
+{% endif %}
+{% endfor %}
+        'is_active',
+
+        // Auditoría estándar
+        'created_at', 'created_at_from', 'created_at_to',
+        'updated_at', 'updated_at_from', 'updated_at_to',
+        'created_by_id', 'updated_by_id', 'deleted_by_id',
+    ];
+
+    // =========================================================================
+    // Filtros de negocio
+    // =========================================================================
+
+{% for field in fields %}
+{% if field.type in ['string', 'text'] %}
+    public function {{ field.name }}(string $value): void
+    {
+        if ($value === '') return;
+        $this->builder->where('{{ field.name }}', 'like', "%{$value}%");
+    }
+
+{% endif %}
+{% endfor %}
+    public function is_active(string $value): void
+    {
+        if ($value === '') return;
+        $this->builder->where('is_active', (bool) $value);
+    }
+
+    // =========================================================================
+    // Filtros de auditoría estándar
+    // =========================================================================
+
+    public function created_at(string $value): void
+    {
+        if ($value === '') return;
+        $this->builder->whereDate('created_at', $value);
+    }
+
+    public function created_at_from(string $value): void
+    {
+        if ($value === '') return;
+        $this->builder->whereDate('created_at', '>=', $value);
+    }
+
+    public function created_at_to(string $value): void
+    {
+        if ($value === '') return;
+        $this->builder->whereDate('created_at', '<=', $value);
+    }
+
+    public function updated_at(string $value): void
+    {
+        if ($value === '') return;
+        $this->builder->whereDate('updated_at', $value);
+    }
+
+    public function updated_at_from(string $value): void
+    {
+        if ($value === '') return;
+        $this->builder->whereDate('updated_at', '>=', $value);
+    }
+
+    public function updated_at_to(string $value): void
+    {
+        if ($value === '') return;
+        $this->builder->whereDate('updated_at', '<=', $value);
+    }
+
+    public function created_by_id(string $value): void
+    {
+        if ($value === '') return;
+        $this->builder->where('created_by_id', $value);
+    }
+
+    public function updated_by_id(string $value): void
+    {
+        if ($value === '') return;
+        $this->builder->where('updated_by_id', $value);
+    }
+
+    public function deleted_by_id(string $value): void
+    {
+        if ($value === '') return;
+        $this->builder->where('deleted_by_id', $value);
+    }
+}

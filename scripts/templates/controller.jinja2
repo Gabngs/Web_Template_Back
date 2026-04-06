@@ -1,0 +1,148 @@
+<?php
+namespace App\Http\Controllers\Api;
+
+use App\Filters\{{ modelName }}Filter;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Store{{ modelName }}Request;
+use App\Http\Requests\Update{{ modelName }}Request;
+use App\Http\Resources\{{ modelName }}Resource;
+use App\Http\Traits\ApiResponse;
+use App\Models\{{ modelName }};
+use App\Services\{{ modelName }}Service;
+
+/**
+ * @OA\Tag(name="{{ modelName }}", description="Gestión de {{ tableName }}")
+ */
+class {{ modelName }}Controller extends Controller
+{
+    use ApiResponse;
+
+    public function __construct(protected {{ modelName }}Service $service) {}
+
+    /**
+     * @OA\Get(
+     *     path="/api/{{ routeName }}",
+     *     tags={"{{ modelName }}"},
+     *     summary="Listar {{ tableName }}",
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(response=200, description="Lista de registros")
+     * )
+     */
+    public function index({{ modelName }}Filter $filter)
+    {
+        $data = {{ modelName }}::filter($filter)
+{% for rel in relations %}
+            ->with('{{ rel.name }}')
+{% endfor %}
+            ->get();
+
+        return $this->responseSuccess(
+            'Registros obtenidos correctamente',
+            {{ modelName }}Resource::collection($data)
+        );
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/{{ routeName }}/{id}",
+     *     tags={"{{ modelName }}"},
+     *     summary="Obtener un {{ modelName | lower }}",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="string")),
+     *     @OA\Response(response=200, description="Detalle del registro")
+     * )
+     */
+    public function show({{ modelName }} ${{ modelNameLower }})
+    {
+{% if relations %}
+        ${{ modelNameLower }}->load([{% for rel in relations %}'{{ rel.name }}'{% if not loop.last %}, {% endif %}{% endfor %}]);
+{% endif %}
+        return $this->responseSuccess(
+            'Registro obtenido correctamente',
+            new {{ modelName }}Resource(${{ modelNameLower }})
+        );
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/{{ routeName }}",
+     *     tags={"{{ modelName }}"},
+     *     summary="Crear {{ modelName | lower }}",
+     *     security={{"sanctum":{}}},
+     *     @OA\Response(response=200, description="Registro creado")
+     * )
+     */
+    public function store(Store{{ modelName }}Request $request)
+    {
+        $modelo = $this->service->crear($request->validated());
+{% if relations %}
+        $modelo->load([{% for rel in relations %}'{{ rel.name }}'{% if not loop.last %}, {% endif %}{% endfor %}]);
+{% endif %}
+        return $this->responseSuccess(
+            'Registro creado correctamente',
+            new {{ modelName }}Resource($modelo)
+        );
+    }
+
+    /**
+     * @OA\Put(
+     *     path="/api/{{ routeName }}/{id}",
+     *     tags={"{{ modelName }}"},
+     *     summary="Actualizar {{ modelName | lower }}",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="string")),
+     *     @OA\Response(response=200, description="Registro actualizado")
+     * )
+     */
+    public function update(Update{{ modelName }}Request $request, {{ modelName }} ${{ modelNameLower }})
+    {
+        $modelo = $this->service->actualizar(${{ modelNameLower }}, $request->validated());
+{% if relations %}
+        $modelo->load([{% for rel in relations %}'{{ rel.name }}'{% if not loop.last %}, {% endif %}{% endfor %}]);
+{% endif %}
+        return $this->responseSuccess(
+            'Registro actualizado correctamente',
+            new {{ modelName }}Resource($modelo)
+        );
+    }
+
+    /**
+     * @OA\Delete(
+     *     path="/api/{{ routeName }}/{id}",
+     *     tags={"{{ modelName }}"},
+     *     summary="Eliminar {{ modelName | lower }}",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="string")),
+     *     @OA\Response(response=200, description="Registro eliminado")
+     * )
+     */
+    public function destroy({{ modelName }} ${{ modelNameLower }})
+    {
+        $deleted = $this->service->eliminar(${{ modelNameLower }});
+        return $this->responseSuccess(
+            'Registro eliminado correctamente',
+            new {{ modelName }}Resource($deleted)
+        );
+    }
+
+{% if usesSoftDeletes %}
+    /**
+     * @OA\Post(
+     *     path="/api/{{ routeName }}/{id}/restore",
+     *     tags={"{{ modelName }}"},
+     *     summary="Restaurar {{ modelName | lower }} eliminado",
+     *     security={{"sanctum":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="string")),
+     *     @OA\Response(response=200, description="Registro restaurado")
+     * )
+     */
+    public function restore(string $id)
+    {
+        $modelo = $this->service->restaurar($id);
+        return $this->responseSuccess(
+            'Registro restaurado correctamente',
+            new {{ modelName }}Resource($modelo)
+        );
+    }
+{% endif %}
+}

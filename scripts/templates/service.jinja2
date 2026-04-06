@@ -1,0 +1,66 @@
+<?php
+namespace App\Services;
+
+use App\Models\{{ modelName }};
+use App\Traits\ResolvesUuidToPkid;
+use Illuminate\Support\Facades\DB;
+
+class {{ modelName }}Service
+{
+    use ResolvesUuidToPkid;
+
+    public function crear(array $data): {{ modelName }}
+    {
+{% if relations %}
+        $data = $this->resolveIds($data, [
+{% for rel in relations %}
+            '{{ rel.foreignKey }}' => '{{ rel.foreignTable | default(rel.model | lower + "s") }}',
+{% endfor %}
+        ]);
+{% endif %}
+{% if usesAudit %}
+        $data['created_by_id'] = auth()->id();
+        $data['updated_by_id'] = auth()->id();
+{% endif %}
+
+        return {{ modelName }}::create($data);
+    }
+
+    public function actualizar({{ modelName }} $modelo, array $data): {{ modelName }}
+    {
+{% if relations %}
+        $data = $this->resolveIds($data, [
+{% for rel in relations %}
+            '{{ rel.foreignKey }}' => '{{ rel.foreignTable | default(rel.model | lower + "s") }}',
+{% endfor %}
+        ]);
+{% endif %}
+{% if usesAudit %}
+        $data['updated_by_id'] = auth()->id();
+{% endif %}
+
+        $modelo->update($data);
+        return $modelo->refresh();
+    }
+
+    public function eliminar({{ modelName }} $modelo): {{ modelName }}
+    {
+{% if usesAudit %}
+        $modelo->update(['deleted_by_id' => auth()->id()]);
+{% endif %}
+        $modelo->delete();
+        return $modelo;
+    }
+
+{% if usesSoftDeletes %}
+    public function restaurar(string $id): {{ modelName }}
+    {
+        $modelo = {{ modelName }}::withTrashed()->where('id', $id)->firstOrFail();
+{% if usesAudit %}
+        $modelo->update(['deleted_by_id' => null]);
+{% endif %}
+        $modelo->restore();
+        return $modelo;
+    }
+{% endif %}
+}

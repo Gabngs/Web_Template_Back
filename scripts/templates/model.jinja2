@@ -1,0 +1,98 @@
+<?php
+namespace App\Models;
+
+use App\Models\Traits\HasFilters;
+{% if usesSoftDeletes %}
+use Illuminate\Database\Eloquent\SoftDeletes;
+{% endif %}
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+{% if usesUuid %}
+class {{ modelName }} extends BaseModel
+{% else %}
+class {{ modelName }} extends \Illuminate\Database\Eloquent\Model
+{% endif %}
+{
+{% if usesSoftDeletes %}
+    use HasFilters, SoftDeletes;
+{% else %}
+    use HasFilters;
+{% endif %}
+
+    protected $table = '{{ tableName }}';
+
+{% if usesUuid %}
+    protected $primaryKey = 'id';
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+{% endif %}
+    protected $fillable = [
+{% if usesUuid %}
+        'id',
+{% endif %}
+{% for field in fields %}
+        '{{ field.name }}',
+{% endfor %}
+{% if usesAudit %}
+        'created_by_id',
+        'updated_by_id',
+        'deleted_by_id',
+{% endif %}
+    ];
+
+{% set has_casts = [] %}
+{% for field in fields %}
+{% if field | cast_type %}
+{% set _ = has_casts.append(field) %}
+{% endif %}
+{% endfor %}
+{% if has_casts %}
+    protected $casts = [
+{% for field in fields %}
+{% if field | cast_type %}
+        '{{ field.name }}' => {{ field | cast_type }},
+{% endif %}
+{% endfor %}
+    ];
+
+{% endif %}
+{% if usesUuid %}
+    public function getRouteKeyName(): string
+    {
+        return 'id';
+    }
+
+{% endif %}
+    // =========================================================================
+    // Relaciones de negocio
+    // =========================================================================
+
+{% for rel in relations %}
+    public function {{ rel.name }}(): BelongsTo
+    {
+        return $this->belongsTo({{ rel.model }}::class, '{{ rel.foreignKey }}', '{{ rel.ownerKey | default("pkid") }}');
+    }
+
+{% endfor %}
+{% if usesAudit %}
+    // =========================================================================
+    // Relaciones de auditoría
+    // =========================================================================
+
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by_id', 'id');
+    }
+
+    public function updatedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by_id', 'id');
+    }
+
+    public function deletedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'deleted_by_id', 'id');
+    }
+{% endif %}
+}

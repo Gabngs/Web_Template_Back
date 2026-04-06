@@ -1,0 +1,10 @@
+<?php
+use App\Http\Controllers\Api\{{ modelName }}Controller;
+use Illuminate\Support\Facades\Route;
+
+Route::middleware('auth:sanctum')->group(function () {
+{% if usesSoftDeletes %}
+    Route::post('/{{ routeName }}/{id}/restore', [{{ modelName }}Controller::class, 'restore']);
+{% endif %}
+    Route::apiResource('{{ routeName }}', {{ modelName }}Controller::class);
+});

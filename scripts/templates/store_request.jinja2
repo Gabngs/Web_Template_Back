@@ -1,0 +1,14 @@
+<?php
+namespace App\Http\Requests;
+
+class Store{{ modelName }}Request extends Base{{ modelName }}Request
+{
+    public function rules(): array
+    {
+        return [
+{% for field in fields %}
+            '{{ field.name }}' => {{ field | val_rules }},
+{% endfor %}
+        ];
+    }
+}

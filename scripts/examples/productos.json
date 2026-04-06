@@ -1,0 +1,58 @@
+{
+    "tableName": "cl_productos",
+    "modelName": "Producto",
+    "usesUuid": true,
+    "usesSoftDeletes": true,
+    "usesAudit": true,
+
+    "fields": [
+        {
+            "name": "nombre",
+            "type": "string",
+            "length": 255,
+            "nullable": false,
+            "unique": false
+        },
+        {
+            "name": "descripcion",
+            "type": "text",
+            "nullable": true
+        },
+        {
+            "name": "precio",
+            "type": "decimal",
+            "precision": 10,
+            "scale": 2,
+            "nullable": false,
+            "default": 0.00
+        },
+        {
+            "name": "stock",
+            "type": "integer",
+            "nullable": false,
+            "default": 0
+        },
+        {
+            "name": "is_active",
+            "type": "boolean",
+            "nullable": false,
+            "default": true
+        },
+        {
+            "name": "categoria_id",
+            "type": "foreignKey",
+            "nullable": true
+        }
+    ],
+
+    "relations": [
+        {
+            "name": "categoria",
+            "type": "belongsTo",
+            "model": "Categoria",
+            "foreignKey": "categoria_id",
+            "ownerKey": "pkid",
+            "foreignTable": "cl_categorias"
+        }
+    ]
+}
