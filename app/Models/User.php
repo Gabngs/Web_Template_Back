@@ -4,19 +4,31 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasFactory, Notifiable;
 
-    protected $fillable = ['name', 'email', 'password', 'is_active', 'avatar'];
+    // HasApiTokens (Sanctum) removido — autenticación delegada a Keycloak
+
+    protected $fillable = [
+        'name', 'email', 'password',
+        'is_active', 'avatar',
+        'rol_id',
+        'keycloak_id',   // UUID del usuario en Keycloak (sub claim)
+    ];
+
     protected $hidden = ['password', 'remember_token'];
+
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password'          => 'hashed',
         'is_active'         => 'boolean',
     ];
+
+    // =========================================================================
+    // Relaciones
+    // =========================================================================
 
     public function roles()
     {

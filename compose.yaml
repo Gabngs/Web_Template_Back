@@ -24,6 +24,8 @@ services:
             - sail
         depends_on:
             - mariadb
+            - keycloak
+
     mariadb:
         image: 'mariadb:11'
         ports:
@@ -41,16 +43,58 @@ services:
         networks:
             - sail
         healthcheck:
-            test:
-                - CMD
-                - healthcheck.sh
-                - '--connect'
-                - '--innodb_initialized'
+            test: ['CMD', 'healthcheck.sh', '--connect', '--innodb_initialized']
             retries: 3
             timeout: 5s
+
+    # ─── Keycloak DB (Postgres requerido por Keycloak) ────────────────────────
+    keycloak-db:
+        image: 'postgres:16-alpine'
+        environment:
+            POSTGRES_DB: keycloak
+            POSTGRES_USER: keycloak
+            POSTGRES_PASSWORD: '${KC_DB_PASSWORD:-keycloak_pass}'
+        volumes:
+            - 'sail-keycloak-db:/var/lib/postgresql/data'
+        networks:
+            - sail
+        healthcheck:
+            test: ['CMD-SHELL', 'pg_isready -U keycloak']
+            retries: 5
+            timeout: 5s
+
+    # ─── Keycloak: Identity Provider ─────────────────────────────────────────
+    # Panel admin:  http://localhost:${KC_PORT}/admin
+    # Realm:        http://localhost:${KC_PORT}/realms/${KC_REALM}
+    # JWKS:         http://keycloak:8080/realms/${KC_REALM}/protocol/openid-connect/certs
+    keycloak:
+        image: 'quay.io/keycloak/keycloak:24.0'
+        command: start-dev --import-realm
+        ports:
+            - '${KC_PORT:-8080}:8080'
+        environment:
+            KC_DB: postgres
+            KC_DB_URL: 'jdbc:postgresql://keycloak-db/keycloak'
+            KC_DB_USERNAME: keycloak
+            KC_DB_PASSWORD: '${KC_DB_PASSWORD:-keycloak_pass}'
+            KEYCLOAK_ADMIN: '${KC_ADMIN_USER:-admin}'
+            KEYCLOAK_ADMIN_PASSWORD: '${KC_ADMIN_PASSWORD:-admin_dev}'
+            KC_HOSTNAME_STRICT: 'false'
+            KC_HTTP_ENABLED: 'true'
+        volumes:
+            - './keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json'
+        networks:
+            - sail
+        depends_on:
+            keycloak-db:
+                condition: service_healthy
+
 networks:
     sail:
         driver: bridge
+
 volumes:
     sail-mariadb:
+        driver: local
+    sail-keycloak-db:
         driver: local

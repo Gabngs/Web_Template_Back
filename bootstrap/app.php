@@ -11,7 +11,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Alias para usar 'keycloak' en rutas en vez del FQCN completo
+        $middleware->alias([
+            'keycloak' => \App\Http\Middleware\KeycloakAuth::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

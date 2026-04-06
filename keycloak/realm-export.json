@@ -1,0 +1,79 @@
+{
+  "realm": "web-template",
+  "displayName": "Web Template",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "accessTokenLifespan": 21600,
+  "clients": [
+    {
+      "clientId": "web-backend",
+      "name": "Web Backend Laravel",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "change-me-in-production",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect",
+      "attributes": {
+        "access.token.lifespan": "21600"
+      }
+    },
+    {
+      "clientId": "web-frontend",
+      "name": "Web Frontend (Angular/React)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "http://localhost:4200/*",
+        "http://localhost:4201/*"
+      ],
+      "webOrigins": [
+        "http://localhost:4200",
+        "http://localhost:4201"
+      ],
+      "protocol": "openid-connect"
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "admin",
+        "description": "Administrador del sistema"
+      },
+      {
+        "name": "editor",
+        "description": "Puede crear y editar registros"
+      },
+      {
+        "name": "viewer",
+        "description": "Solo lectura"
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "admin",
+      "email": "admin@template.com",
+      "firstName": "Administrador",
+      "lastName": "Sistema",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["admin"]
+    }
+  ]
+}

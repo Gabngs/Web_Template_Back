@@ -2,140 +2,133 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Http;
 
 /**
  * @OA\Info(
  *     title="Web Template API",
  *     version="1.0.0",
- *     description="API base del Web Template. Clona este proyecto para nuevos proyectos."
+ *     description="API base del Web Template con autenticación Keycloak (OAuth2/OIDC)."
  * )
  * @OA\Server(url=L5_SWAGGER_CONST_HOST, description="Servidor actual")
  * @OA\SecurityScheme(
- *     securityScheme="sanctum",
+ *     securityScheme="keycloak",
  *     type="http",
  *     scheme="bearer",
  *     bearerFormat="JWT",
- *     description="Token Bearer obtenido desde POST /api/auth/login"
+ *     description="Token JWT obtenido desde Keycloak. Ver POST /api/auth/login (solo dev)."
  * )
- * @OA\Tag(name="Auth", description="Autenticación con tokens Bearer Sanctum")
+ * @OA\Tag(name="Auth", description="Autenticación vía Keycloak (Identity Provider)")
  */
 class AuthController extends Controller
 {
     /**
      * @OA\Post(
      *     path="/api/auth/login",
-     *     summary="Login - obtener Bearer token",
+     *     summary="Login — obtener JWT desde Keycloak (solo desarrollo/testing)",
+     *     description="Modo dev: intercambia credenciales por JWT directamente (direct grant).
+     *     En producción el frontend usa flujo Authorization Code con PKCE.",
      *     tags={"Auth"},
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
-     *             required={"email","password"},
-     *             @OA\Property(property="email", type="string", example="admin@template.com"),
+     *             required={"username","password"},
+     *             @OA\Property(property="username", type="string", example="admin"),
      *             @OA\Property(property="password", type="string", example="password")
      *         )
      *     ),
      *     @OA\Response(
      *         response=200,
-     *         description="Login exitoso",
+     *         description="JWT obtenido exitosamente",
      *         @OA\JsonContent(
      *             @OA\Property(property="access_token", type="string"),
      *             @OA\Property(property="token_type", type="string", example="Bearer"),
-     *             @OA\Property(property="expires_in", type="integer", example=86400),
-     *             @OA\Property(property="user", type="object",
-     *                 @OA\Property(property="id", type="integer"),
-     *                 @OA\Property(property="name", type="string"),
-     *                 @OA\Property(property="email", type="string"),
-     *                 @OA\Property(property="roles", type="array", @OA\Items(type="string"))
-     *             )
+     *             @OA\Property(property="expires_in", type="integer", example=21600),
+     *             @OA\Property(property="refresh_token", type="string")
      *         )
      *     ),
-     *     @OA\Response(response=422, description="Credenciales incorrectas"),
-     *     @OA\Response(response=403, description="Usuario inactivo")
+     *     @OA\Response(response=401, description="Credenciales incorrectas")
      * )
      */
     public function login(Request $request)
     {
         $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required',
+            'username' => 'required|string',
+            'password' => 'required|string',
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        $response = Http::asForm()->post(config('keycloak.token_uri'), [
+            'grant_type'    => 'password',
+            'client_id'     => config('keycloak.client_id'),
+            'client_secret' => config('keycloak.client_secret'),
+            'username'      => $request->username,
+            'password'      => $request->password,
+            'scope'         => 'openid profile email',
+        ]);
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['Las credenciales no son correctas.'],
-            ]);
+        if (!$response->ok()) {
+            return response()->json([
+                'message' => 'Credenciales incorrectas o usuario no existe en Keycloak',
+            ], 401);
         }
 
-        if (!$user->is_active) {
-            return response()->json(['message' => 'Usuario inactivo'], 403);
-        }
-
-        $user->tokens()->delete();
-        $minutes    = (int) config('sanctum.expiration', 360);
-        $expiresAt  = now()->addMinutes($minutes);
-        $token      = $user->createToken('api-token', ['*'], $expiresAt);
+        $data = $response->json();
 
         return response()->json([
-            'access_token' => $token->plainTextToken,
-            'token_type'   => 'Bearer',
-            'expires_in'   => $minutes * 60,
-            'user'         => [
-                'id'    => $user->id,
-                'name'  => $user->name,
-                'email' => $user->email,
-                'roles' => $user->roles->pluck('name'),
-            ],
+            'access_token'  => $data['access_token'],
+            'token_type'    => 'Bearer',
+            'expires_in'    => $data['expires_in'],
+            'refresh_token' => $data['refresh_token'] ?? null,
         ]);
     }
 
     /**
      * @OA\Post(
      *     path="/api/auth/logout",
-     *     summary="Logout - revocar token actual",
+     *     summary="Logout — revocar sesión en Keycloak",
      *     tags={"Auth"},
-     *     security={{"sanctum":{}}},
+     *     security={{"keycloak":{}}},
+     *     @OA\RequestBody(
+     *         @OA\JsonContent(
+     *             @OA\Property(property="refresh_token", type="string",
+     *                 description="Refresh token para invalidar la sesión completa en Keycloak")
+     *         )
+     *     ),
      *     @OA\Response(response=200, description="Sesión cerrada")
      * )
      */
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        $refreshToken = $request->input('refresh_token');
+
+        if ($refreshToken) {
+            Http::asForm()->post(config('keycloak.logout_uri'), [
+                'client_id'     => config('keycloak.client_id'),
+                'client_secret' => config('keycloak.client_secret'),
+                'refresh_token' => $refreshToken,
+            ]);
+        }
+
         return response()->json(['message' => 'Sesión cerrada correctamente']);
     }
 
     /**
      * @OA\Get(
      *     path="/api/auth/me",
-     *     summary="Datos del usuario autenticado + roles + permisos",
+     *     summary="Datos del usuario autenticado + roles",
      *     tags={"Auth"},
-     *     security={{"sanctum":{}}},
-     *     @OA\Response(
-     *         response=200,
-     *         description="Datos del usuario",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="user", type="object"),
-     *             @OA\Property(property="roles", type="array", @OA\Items(type="string")),
-     *             @OA\Property(property="permissions", type="array", @OA\Items(type="string"))
-     *         )
-     *     )
+     *     security={{"keycloak":{}}},
+     *     @OA\Response(response=200, description="Datos del usuario")
      * )
      */
     public function me(Request $request)
     {
-        $user = $request->user()->load('roles.permissions');
-
-        $permissions = $user->roles->flatMap(fn($role) => $role->permissions->pluck('name'))->unique()->values();
+        $user = $request->user()->load('roles');
 
         return response()->json([
-            'user'        => $user->only(['id', 'name', 'email', 'avatar', 'is_active']),
-            'roles'       => $user->roles->pluck('name'),
-            'permissions' => $permissions,
+            'user'  => $user->only(['id', 'name', 'email', 'avatar', 'is_active']),
+            'roles' => $user->roles->pluck('name'),
         ]);
     }
 }
