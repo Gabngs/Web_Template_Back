@@ -4,18 +4,21 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
-
-    // HasApiTokens (Sanctum) removido — autenticación delegada a Keycloak
+    // Sanctum habilitado para tokens de usuarios que inician sesión con Google
+    use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
         'name', 'email', 'password',
         'is_active', 'avatar',
         'rol_id',
-        'keycloak_id',   // UUID del usuario en Keycloak (sub claim)
+        'keycloak_id',    // UUID del usuario en Keycloak (sub claim)
+        'google_sub',     // Identificador único de Google (sub claim)
+        'user_avatar_url',
+        'password_set_at',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -24,6 +27,7 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password'          => 'hashed',
         'is_active'         => 'boolean',
+        'password_set_at'   => 'datetime',
     ];
 
     // =========================================================================

@@ -4,7 +4,15 @@ use Illuminate\Support\Facades\Route;
 
 // ─── Rutas públicas ───────────────────────────────────────────────────────────
 Route::prefix('auth')->group(function () {
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login',  [AuthController::class, 'login']);
+    Route::post('/google', [AuthController::class, 'loginWithGoogle']);
+});
+
+// ─── Rutas protegidas — Sanctum (usuarios Google) ─────────────────────────────
+Route::middleware('auth:sanctum')->group(function () {
+    Route::prefix('auth')->group(function () {
+        Route::post('/setup-password', [AuthController::class, 'setupPassword']);
+    });
 });
 
 // ─── Rutas protegidas — KeycloakAuth ─────────────────────────────────────────
