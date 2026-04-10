@@ -10,8 +10,9 @@ Route::prefix('auth')->group(function () {
 // ─── Rutas protegidas con Sanctum ─────────────────────────────────────────────
 Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('auth')->group(function () {
-        Route::post('/logout', [AuthController::class, 'logout']);
-        Route::get('/me',     [AuthController::class, 'me']);
+        Route::post('/logout',         [AuthController::class, 'logout']);
+        Route::get('/me',              [AuthController::class, 'me']);
+        Route::post('/setup-password', [AuthController::class, 'setupPassword']);
     });
 
     // ─── Módulos de negocio ───────────────────────────────────────────────────
