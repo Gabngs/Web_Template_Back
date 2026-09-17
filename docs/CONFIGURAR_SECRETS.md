@@ -95,10 +95,14 @@ kubectl -n $NS create secret generic lcs-env \
   '--from-literal=CORS_ALLOWED_ORIGINS=https://tu-frontend.com' \
   '--from-literal=MAIL_MAILER=resend' \
   '--from-literal=RESEND_API_KEY=re_xxx' \
-  '--from-literal=MAIL_FROM_ADDRESS=no-reply@tudominio.com'
+  '--from-literal=MAIL_FROM_ADDRESS=no-reply@tudominio.com' \
+  '--from-literal=SIAW_ADMIN_EMAIL_INICIAL=tu-email-real@dominio.com' \
+  '--from-literal=SIAW_ADMIN_PASSWORD_INICIAL=tu-password-real'
 ```
 
 Usar comillas simples en cada `--from-literal='KEY=VALUE'` — sin esto, bash expande `$` dentro de las passwords antes de que `kubectl` las reciba.
+
+`SIAW_ADMIN_EMAIL_INICIAL`/`SIAW_ADMIN_PASSWORD_INICIAL` los lee `SiawUsuarioAdminSeeder` (corre una sola vez, vía `seeders_log`) al crear el usuario admin inicial. Sin este secret, cae al genérico de `.env.example` (`admin@example.com` / `Cambiar123!`) — no rompe el deploy, solo no queda el email/password que querés de verdad. El email importa en la práctica porque `resetPassword()` manda ahí la contraseña temporal por correo.
 
 ### Secrets acotados (usuarios de BD con permisos mínimos, opcional pero recomendado)
 

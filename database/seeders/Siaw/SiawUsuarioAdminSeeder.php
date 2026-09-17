@@ -9,12 +9,14 @@ use Illuminate\Support\Str;
 
 class SiawUsuarioAdminSeeder extends Seeder
 {
-    private const ADMIN_EMAIL = 'gabrielsulca159@gmail.com';
-
     public function run(): void
     {
-        $now  = now();
-        $conn = 'dbsiaw';
+        $now   = now();
+        $conn  = 'dbsiaw';
+        // Genérico por defecto (queda commiteado en .env.example a propósito,
+        // no expone nada real). El valor real va en .env local (gitignorado)
+        // o en el secret lcs-env de K8s en prod — ver docs/CONFIGURAR_SECRETS.md.
+        $email = env('SIAW_ADMIN_EMAIL_INICIAL', 'admin@example.com');
 
         $rol = DB::connection($conn)
             ->table('siaw_roles')
@@ -23,16 +25,16 @@ class SiawUsuarioAdminSeeder extends Seeder
 
         $usuario = DB::connection($conn)
             ->table('siaw_usuarios')
-            ->where('email', self::ADMIN_EMAIL)
+            ->where('email', $email)
             ->first();
 
         if (!$usuario) {
             DB::connection($conn)->table('siaw_usuarios')->insert([
                 'id'         => Str::uuid()->toString(),
-                'nombre'     => 'Gabriel',
-                'apellidos'  => 'Sulca',
-                'email'      => self::ADMIN_EMAIL,
-                'password'   => Hash::make('25478631sS'),
+                'nombre'     => 'Admin',
+                'apellidos'  => 'LCS',
+                'email'      => $email,
+                'password'   => Hash::make(env('SIAW_ADMIN_PASSWORD_INICIAL', 'Cambiar123!')),
                 'activo'     => 1,
                 'rol_id'     => $rol?->pkid,
                 'created_at' => $now,
@@ -41,7 +43,7 @@ class SiawUsuarioAdminSeeder extends Seeder
 
             $usuario = DB::connection($conn)
                 ->table('siaw_usuarios')
-                ->where('email', self::ADMIN_EMAIL)
+                ->where('email', $email)
                 ->first();
         }
 
