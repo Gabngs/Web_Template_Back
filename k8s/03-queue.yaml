@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lcs-queue-prod
+  namespace: lcs-prod
+  labels:
+    app: lcs-queue-prod
+    role: queue
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lcs-queue-prod
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: lcs-queue-prod
+        role: queue
+    spec:
+      imagePullSecrets:
+      - name: ghcr-secret
+      containers:
+      - name: queue
+        image: ghcr.io/gabngs/lcs:latest
+        command: ["php", "artisan", "queue:work",
+                  "--sleep=3", "--tries=3", "--max-time=3600"]
+        envFrom:
+        - secretRef:
+            name: lcs-env
+        - secretRef:
+            name: lcs-db-users
+            optional: true
+        volumeMounts:
+        - name: rsa-keys
+          mountPath: /var/www/storage/keys
+          readOnly: true
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "256Mi"
+            cpu: "300m"
+      volumes:
+      - name: rsa-keys
+        persistentVolumeClaim:
+          claimName: lcs-rsa-keys-pvc

@@ -1,0 +1,149 @@
+services:
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  Backend Laravel / PHP-FPM  →  sirve HTTP (API + Swagger)
+    # ─────────────────────────────────────────────────────────────────────────
+    lcs_laravel_backend:
+        container_name: lcs_laravel_backend
+        build:
+            context: ./vendor/laravel/sail/runtimes/8.4
+            dockerfile: Dockerfile
+            args:
+                WWWGROUP: '${WWWGROUP}'
+        image: sail-8.4/app
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
+        ports:
+            - '${APP_PORT:-8877}:80'
+            - '${VITE_PORT:-5176}:${VITE_PORT:-5176}'
+        environment:
+            WWWUSER: '${WWWUSER}'
+            LARAVEL_SAIL: 1
+            XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
+            XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
+            IGNITION_LOCAL_SITES_PATH: '${PWD}'
+        volumes:
+            - '.:/var/www/html'
+        networks:
+            - lcs-network
+        depends_on:
+            lcs_db:
+                condition: service_healthy
+            lcs_redis:
+                condition: service_healthy
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  Queue Worker  →  procesa jobs encolados (php artisan queue:work)
+    # ─────────────────────────────────────────────────────────────────────────
+    lcs_queue:
+        container_name: lcs_queue
+        image: sail-8.4/app
+        pull_policy: never
+        environment:
+            WWWUSER: '${WWWUSER}'
+            LARAVEL_SAIL: 1
+            SUPERVISOR_PHP_COMMAND: "php artisan queue:work --sleep=3 --tries=3 --max-time=3600"
+            SUPERVISOR_PHP_USER: "sail"
+        volumes:
+            - '.:/var/www/html'
+        networks:
+            - lcs-network
+        depends_on:
+            lcs_db:
+                condition: service_healthy
+            lcs_redis:
+                condition: service_healthy
+        restart: unless-stopped
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  Scheduler  →  ejecuta tareas programadas cada minuto (schedule:work)
+    # ─────────────────────────────────────────────────────────────────────────
+    lcs_scheduler:
+        container_name: lcs_scheduler
+        image: sail-8.4/app
+        pull_policy: never
+        environment:
+            WWWUSER: '${WWWUSER}'
+            LARAVEL_SAIL: 1
+            SUPERVISOR_PHP_COMMAND: "php artisan schedule:work"
+            SUPERVISOR_PHP_USER: "sail"
+        volumes:
+            - '.:/var/www/html'
+        networks:
+            - lcs-network
+        depends_on:
+            lcs_db:
+                condition: service_healthy
+            lcs_redis:
+                condition: service_healthy
+        restart: unless-stopped
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  Base de datos — un solo servidor MariaDB con 3 bases lógicas fijas:
+    #    db_lcs    → negocio propio   (tablas {prefijo}_*, vacía hasta el primer módulo)
+    #    db_siaw   → auth             (tablas siaw_*)
+    #    db_sincro → infra            (jobs, cache, scheduler, ledger de migraciones)
+    #  Las 3 se crean en database/docker-init/01_init_databases.sql
+    # ─────────────────────────────────────────────────────────────────────────
+    lcs_db:
+        container_name: lcs_db
+        image: 'mariadb:10.11'
+        ports:
+            - '${FORWARD_DB_PORT:-3322}:3306'
+        environment:
+            MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+            MYSQL_ROOT_HOST: '%'
+            MYSQL_DATABASE: '${DB_SIAW_DATABASE}'
+            MYSQL_USER: '${DB_USERNAME}'
+            MYSQL_PASSWORD: '${DB_PASSWORD}'
+            MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+        volumes:
+            - 'lcs_db_data:/var/lib/mysql'
+            - './database/docker-init:/docker-entrypoint-initdb.d'
+        networks:
+            - lcs-network
+        healthcheck:
+            test: ['CMD', 'healthcheck.sh', '--connect', '--innodb_initialized']
+            start_period: 15s
+            interval: 5s
+            timeout: 5s
+            retries: 5
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  Redis  →  cache, sessions
+    # ─────────────────────────────────────────────────────────────────────────
+    lcs_redis:
+        container_name: lcs_redis
+        image: 'redis:alpine'
+        ports:
+            - '${FORWARD_REDIS_PORT:-6381}:6379'
+        volumes:
+            - 'lcs_redis_data:/data'
+        networks:
+            - lcs-network
+        healthcheck:
+            test: ['CMD', 'redis-cli', 'ping']
+            retries: 3
+            timeout: 5s
+
+    # ─────────────────────────────────────────────────────────────────────────
+    #  Mailpit  →  captura de emails en desarrollo
+    # ─────────────────────────────────────────────────────────────────────────
+    lcs_mailpit:
+        container_name: lcs_mailpit
+        image: 'axllent/mailpit:latest'
+        ports:
+            - '${FORWARD_MAILPIT_PORT:-1026}:1025'
+            - '${FORWARD_MAILPIT_DASHBOARD_PORT:-8026}:8025'
+        networks:
+            - lcs-network
+
+networks:
+    lcs-network:
+        driver: bridge
+
+volumes:
+    lcs_db_data:
+        driver: local
+    lcs_redis_data:
+        driver: local

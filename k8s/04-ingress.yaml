@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lcs-ingress
+  namespace: lcs-prod
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  rules:
+  - host: lcs-api.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: lcs-laravel-service
+            port:
+              number: 80
+  tls:
+  - hosts:
+    - lcs-api.example.com
+    secretName: lcs-tls

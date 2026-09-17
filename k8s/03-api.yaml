@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lcs-laravel-prod
+  namespace: lcs-prod
+  labels:
+    app: lcs-laravel-prod
+    role: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lcs-laravel-prod
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: lcs-laravel-prod
+        role: api
+    spec:
+      imagePullSecrets:
+      - name: ghcr-secret
+      containers:
+      - name: app
+        image: ghcr.io/gabngs/lcs:latest
+        # CMD del Dockerfile: supervisord con nginx + php-fpm
+        ports:
+        - containerPort: 80
+        envFrom:
+        - secretRef:
+            name: lcs-env
+        # Credenciales de BD acotadas: solo DB_RUNTIME_USER/PASS = lcs_app (DML).
+        # `optional` para que el pod arranque aunque el secret aún no exista
+        # (cae al fallback per-módulo de lcs-env). Ver docs/RUNBOOK_BD_Y_SEGURIDAD.md.
+        - secretRef:
+            name: lcs-db-users
+            optional: true
+        volumeMounts:
+        - name: rsa-keys
+          mountPath: /var/www/storage/keys
+          readOnly: true
+        # startupProbe cubre el arranque (hasta ~40s: entrypoint hace config:cache);
+        # una vez listo, readiness responde rápido y no vuelve a haber ventana larga.
+        startupProbe:
+          httpGet:
+            path: /up
+            port: 80
+          periodSeconds: 3
+          failureThreshold: 15
+        readinessProbe:
+          httpGet:
+            path: /up
+            port: 80
+          initialDelaySeconds: 3
+          periodSeconds: 3
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /up
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 15
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: rsa-keys
+        persistentVolumeClaim:
+          claimName: lcs-rsa-keys-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lcs-laravel-service
+  namespace: lcs-prod
+spec:
+  selector:
+    app: lcs-laravel-prod
+  ports:
+  - port: 80
+    targetPort: 80

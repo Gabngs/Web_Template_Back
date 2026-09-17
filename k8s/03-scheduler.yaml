@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lcs-scheduler-prod
+  namespace: lcs-prod
+  labels:
+    app: lcs-scheduler-prod
+    role: scheduler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lcs-scheduler-prod
+  strategy:
+    type: Recreate   # scheduler debe correr solo 1 réplica siempre
+  template:
+    metadata:
+      labels:
+        app: lcs-scheduler-prod
+        role: scheduler
+    spec:
+      imagePullSecrets:
+      - name: ghcr-secret
+      containers:
+      - name: scheduler
+        image: ghcr.io/gabngs/lcs:latest
+        command:
+          - sh
+          - -c
+          - |
+            php artisan auth:rotate-keys || true
+            exec php artisan schedule:work --no-interaction
+        envFrom:
+        - secretRef:
+            name: lcs-env
+        - secretRef:
+            name: lcs-db-users
+            optional: true
+        volumeMounts:
+        - name: rsa-keys
+          mountPath: /var/www/storage/keys
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "25m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+      volumes:
+      - name: rsa-keys
+        persistentVolumeClaim:
+          claimName: lcs-rsa-keys-pvc

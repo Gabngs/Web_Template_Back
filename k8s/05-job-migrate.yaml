@@ -1,0 +1,68 @@
+# Este archivo usa __SHA__ como placeholder.
+# El workflow de GitHub Actions lo reemplaza por el SHA del commit antes de aplicarlo.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: lcs-migrate-__SHA__
+  namespace: lcs-prod
+spec:
+  backoffLimit: 0     # no reintentar si falla — el deploy se detiene
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        app: lcs-migrate
+        role: migrate
+    spec:
+      restartPolicy: Never
+      imagePullSecrets:
+      - name: ghcr-secret
+      automountServiceAccountToken: false
+      containers:
+      - name: migrate
+        image: ghcr.io/gabngs/lcs:__SHA__
+        command:
+          - sh
+          - -c
+          - |
+            set -e
+            ( php artisan config:cache || php artisan config:clear || true )
+            php k8s/scripts/ensure-databases.php
+            # Un solo `migrate` sin flags: AppServiceProvider::boot() registra
+            # todas las carpetas database/migrations/<Modulo>/ (loadMigrationsFrom
+            # + glob), cada archivo fija su BD con `protected $connection`, y el
+            # ledger va a dbsincro vía CentralMigrationRepository.
+            # Módulo nuevo = carpeta nueva, sin tocar este YAML.
+            php artisan migrate --force
+            php artisan db:seed --force
+            # Backfill idempotente de siaw_content_model/permisos.sistema_id
+            # desde app_label (config/sistemas.php). Se puede correr siempre.
+            php artisan siaw:poblar-sistema-id
+            php artisan auth:rotate-keys
+        envFrom:
+        - secretRef:
+            name: lcs-env
+        # root de MariaDB — su propio secret, NO en lcs-env (ver runbook).
+        - secretRef:
+            name: lcs-db-root
+            optional: true
+        # Solo el Job: DB_APP_*/DB_MIGRATE_* (definiciones para ensure-databases.php)
+        # y DB_RUNTIME_USER/PASS = lcs_migrate (para que `artisan migrate` tenga DDL).
+        - secretRef:
+            name: lcs-db-admin
+            optional: true
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "192Mi"
+            ephemeral-storage: "256Mi"
+          limits:
+            memory: "512Mi"
+            ephemeral-storage: "512Mi"
+        volumeMounts:
+        - name: rsa-keys
+          mountPath: /var/www/storage/keys
+      volumes:
+      - name: rsa-keys
+        persistentVolumeClaim:
+          claimName: lcs-rsa-keys-pvc

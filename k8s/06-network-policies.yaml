@@ -1,0 +1,92 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  NetworkPolicies — OPT-IN. NO se aplica en el deploy automático.
+#
+#  Aplicá primero SOLO las reglas "allow" (todo menos el último documento) y
+#  verificá que la app siga funcionando:
+#      kubectl apply -f k8s/06-network-policies.yaml
+#  Recién cuando confirmes, descomentá el default-deny del final.
+#  Revertir cualquier cosa:  kubectl delete -f k8s/06-network-policies.yaml
+#
+#  Requiere un CNI que ENFORCE NetworkPolicy (k3s lo hace por defecto desde
+#  ~2021; con flannel "puro" sin plugin, esto es un no-op inofensivo).
+#
+#  Modelo: los pods de app (role: api|queue|scheduler|migrate) pueden hablar
+#  con MariaDB y Redis; nada más entra a esos dos. La API recibe tráfico solo
+#  del ingress-controller.
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-app-to-mariadb
+  namespace: lcs-prod
+spec:
+  podSelector:
+    matchLabels:
+      app: mariadb
+  policyTypes: ["Ingress"]
+  ingress:
+  - from:
+    - podSelector:
+        matchExpressions:
+        - key: role
+          operator: In
+          values: ["api", "queue", "scheduler", "migrate"]
+    ports:
+    - protocol: TCP
+      port: 3306
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-app-to-redis
+  namespace: lcs-prod
+spec:
+  podSelector:
+    matchLabels:
+      app: redis
+  policyTypes: ["Ingress"]
+  ingress:
+  - from:
+    - podSelector:
+        matchExpressions:
+        - key: role
+          operator: In
+          values: ["api", "queue", "scheduler"]
+    ports:
+    - protocol: TCP
+      port: 6379
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-api
+  namespace: lcs-prod
+spec:
+  podSelector:
+    matchLabels:
+      role: api
+  policyTypes: ["Ingress"]
+  ingress:
+  - from:
+    # Ajustá el namespace del ingress controller de tu cluster
+    # (k3s con Traefik: normalmente "kube-system").
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+    ports:
+    - protocol: TCP
+      port: 80
+  # Probes del kubelet vienen del nodo, no de un pod — el CNI las permite
+  # aparte; si tu CNI las bloquea, agregá un `from: - ipBlock: cidr: <nodo>`.
+# ─────────────────────────────────────────────────────────────────────────────
+# DESCOMENTAR SOLO DESPUÉS de verificar que lo de arriba no rompió nada:
+# ---
+# apiVersion: networking.k8s.io/v1
+# kind: NetworkPolicy
+# metadata:
+#   name: default-deny-ingress
+#   namespace: lcs-prod
+# spec:
+#   podSelector: {}
+#   policyTypes: ["Ingress"]
+# ─────────────────────────────────────────────────────────────────────────────
