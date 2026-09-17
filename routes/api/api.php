@@ -10,6 +10,12 @@ Route::prefix('auth')->group(function () {
     Route::get('/public-key', [AuthController::class, 'getPublicKey']);
     Route::get('/challenge',  [AuthController::class, 'challenge'])->middleware('throttle:30,1');
     Route::post('/login',     [AuthController::class, 'login'])->middleware('throttle:login');
+
+    // Solo desarrollo — password en texto plano, hace el RSA+challenge acá
+    // mismo. Ver app/Http/Middleware/EnsureDevEndpointsEnabled.php (404 si
+    // APP_ENV=production).
+    Route::post('/login-dev', [AuthController::class, 'loginDev'])
+        ->middleware(['dev.only', 'throttle:login']);
 });
 
 // ── Protegidas ─────────────────────────────────────────────────────────────

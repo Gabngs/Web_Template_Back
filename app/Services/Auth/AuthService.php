@@ -106,6 +106,29 @@ class AuthService
         ];
     }
 
+    /**
+     * Login de conveniencia SOLO para desarrollo (gateado por el middleware
+     * 'dev.only', 404 en producción) — recibe la password en texto plano y
+     * hace acá mismo lo que en producción hace el frontend: pide el
+     * challenge, encripta con la clave pública del slot vigente (RSA PKCS1 +
+     * base64) y llama al login() real. Pensado para probar la API desde
+     * Swagger/curl sin tener que armar el paso de encriptación a mano.
+     */
+    public function loginDev(array $data): array
+    {
+        $nonce = $this->challenge()['data']['nonce'];
+
+        $publicKey = file_get_contents(self::publicKeyPath());
+        openssl_public_encrypt($data['password'], $encrypted, $publicKey, OPENSSL_PKCS1_PADDING);
+
+        return $this->login([
+            'email'    => $data['email'],
+            'password' => base64_encode($encrypted),
+            'nonce'    => $nonce,
+            'device'   => $data['device'] ?? 'dev',
+        ]);
+    }
+
     // ── Sesiones ──────────────────────────────────────────────────────────
 
     public function sessions(SiawUsuarios $usuario): array

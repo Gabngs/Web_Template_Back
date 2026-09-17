@@ -42,6 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'forzar.cambio'    => \App\Http\Middleware\ForzarCambioPassword::class,
             'permiso'          => \App\Http\Middleware\RequierePermiso::class,
             'swagger.enabled'  => \App\Http\Middleware\EnsureSwaggerEnabled::class,
+            'dev.only'         => \App\Http\Middleware\EnsureDevEndpointsEnabled::class,
 
             // Abilities de token Sanctum — las usa el módulo Almuerzos
             // (almuerzo:enviar / almuerzo:asignar / almuerzo:editar). No vienen

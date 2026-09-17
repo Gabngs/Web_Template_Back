@@ -117,6 +117,44 @@ class AuthController extends Controller
         }
     }
 
+    /**
+     * @OA\Post(
+     *      path="/api/auth/login-dev",
+     *      operationId="loginDev",
+     *      tags={"Autenticacion"},
+     *      summary="[SOLO DEV] Login con password en texto plano — 404 en producción",
+     *      description="Hace acá mismo lo que en producción hace el frontend (challenge + encriptado RSA) para poder probar la API desde Swagger/curl sin armar el paso de encriptación a mano. Gateado por el middleware dev.only (app()->environment('production') → 404).",
+     *      @OA\RequestBody(
+     *          required=true,
+     *          @OA\JsonContent(
+     *              required={"email","password"},
+     *              @OA\Property(property="email",    type="string", description="Email o código de usuario"),
+     *              @OA\Property(property="password", type="string", description="Password en TEXTO PLANO — solo dev"),
+     *              @OA\Property(property="device",   type="string", description="Default: dev")
+     *          )
+     *      ),
+     *      @OA\Response(response=200, description="Login exitoso — mismo shape que /auth/login"),
+     *      @OA\Response(response=401, description="Credenciales incorrectas"),
+     *      @OA\Response(response=404, description="No disponible en producción")
+     * )
+     */
+    public function loginDev(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'email'    => ['required', 'string'],
+            'password' => ['required', 'string'],
+            'device'   => ['nullable', 'string'],
+        ]);
+
+        try {
+            $result = $this->authService->loginDev($data);
+
+            return $this->responseSuccess($result['message'], $result['data']);
+        } catch (AuthenticationException $e) {
+            return $this->responseUnAuthenticated($e->getMessage());
+        }
+    }
+
     // ── Protegidos ────────────────────────────────────────────────────────
 
     /**
