@@ -219,7 +219,7 @@ docker compose exec -T "$APP_CONTAINER" php artisan config:cache 2>/dev/null || 
 docker compose exec -T "$APP_CONTAINER" php artisan route:cache  2>/dev/null || true
 
 # 16. Mostrar puertos desde .env
-APP_PORT=$(grep "^APP_PORT=" .env | cut -d'=' -f2 | tr -d ' '); APP_PORT=${APP_PORT:-8877}
+APP_PORT=$(grep "^APP_PORT=" .env | cut -d'=' -f2 | tr -d ' '); APP_PORT=${APP_PORT:-8844}
 DB_PORT=$(grep "^FORWARD_DB_PORT=" .env | cut -d'=' -f2 | tr -d ' '); DB_PORT=${DB_PORT:-3322}
 MAIL_PORT=$(grep "^FORWARD_MAILPIT_DASHBOARD_PORT=" .env | cut -d'=' -f2 | tr -d ' '); MAIL_PORT=${MAIL_PORT:-8026}
 

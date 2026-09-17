@@ -56,7 +56,7 @@ echo -e "${BLUE}  ── Entorno ───────────────�
 APP_ENV=$(ask "APP_ENV" "Entorno (local/production)" "local")
 APP_DEBUG=$([ "$APP_ENV" = "production" ] && echo "false" || echo "true")
 APP_URL=$(ask "APP_URL" "URL de la app" "http://localhost")
-APP_PORT=$(ask "APP_PORT" "Puerto HTTP" "8877")
+APP_PORT=$(ask "APP_PORT" "Puerto HTTP" "8844")
 
 echo ""
 echo -e "${BLUE}  ── Base de datos ────────────────────────────────${NC}"

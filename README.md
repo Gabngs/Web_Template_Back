@@ -16,8 +16,8 @@ bash setup.sh   # .env interactivo (opcional, o copiá .env.example a mano) — 
 bash start.sh   # build + up + migrate + seed + claves RSA + swagger
 ```
 
-- API: http://localhost:8877
-- Swagger: http://localhost:8877/api/documentation
+- API: http://localhost:8844
+- Swagger: http://localhost:8844/api/documentation
 - Mailpit: http://localhost:8026
 
 Usuario admin sembrado por `SiawUsuarioAdminSeeder` — ver esa clase para las credenciales iniciales.
