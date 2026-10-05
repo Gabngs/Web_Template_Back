@@ -59,6 +59,47 @@ ensure_env_var DB_QUEUE_CONNECTION "dbsincro"
 ensure_env_var CACHE_STORE "redis"
 ensure_env_var DB_CACHE_CONNECTION "dbsincro"
 
+# 1c. Puertos (APP_PORT y FORWARD_DB_PORT, los usa docker-compose.yml).
+# Uso:  ./start.sh -p 9000 -d 3024
+#       ./start.sh --port 9000 --db-port 3024
+# Sin argumentos y con terminal interactiva, pregunta (Enter = valor actual).
+APP_PORT_ARG=""
+DB_PORT_ARG=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -p|--port)     APP_PORT_ARG="${2:-}"; shift 2 || shift ;;
+        --port=*)      APP_PORT_ARG="${1#--port=}"; shift ;;
+        -d|--db-port)  DB_PORT_ARG="${2:-}"; shift 2 || shift ;;
+        --db-port=*)   DB_PORT_ARG="${1#--db-port=}"; shift ;;
+        *)             fail "Argumento desconocido: $1 (usa -p/--port y -d/--db-port)" ;;
+    esac
+done
+
+# choose_port <VAR_ENV> <valor_por_defecto> <descripcion> <valor_pedido>
+# Resuelve el puerto (argumento > pregunta interactiva > valor actual del
+# .env > default), lo valida, lo guarda en .env y lo deja en $CHOSEN_PORT.
+choose_port() {
+    local key="$1" default="$2" label="$3" port="$4" current
+    current="$(grep "^${key}=" .env | cut -d'=' -f2 | tr -d ' \r')"
+    current="${current:-$default}"
+    if [ -z "$port" ] && [ -t 0 ]; then
+        read -r -p "Puerto de ${label} [${current}]: " port
+    fi
+    port="${port:-$current}"
+    if ! [[ "$port" =~ ^[0-9]+$ ]] || [ "$port" -lt 1 ] || [ "$port" -gt 65535 ]; then
+        fail "Puerto inválido para ${label}: '${port}' (debe ser un número entre 1 y 65535)."
+    fi
+    if grep -q "^${key}=" .env; then
+        sed -i "s/^${key}=.*/${key}=${port}/" .env
+    else
+        printf '%s=%s\n' "$key" "$port" >> .env
+    fi
+    echo -e "${GREEN}>>> Puerto de ${label}: ${port}${NC}"
+    CHOSEN_PORT="$port"
+}
+choose_port APP_PORT        8844 "la aplicación"    "$APP_PORT_ARG"
+choose_port FORWARD_DB_PORT 3322 "la base de datos" "$DB_PORT_ARG"
+
 # 2. Instalar dependencias Composer ANTES de construir la imagen.
 #    El Dockerfile de la imagen se toma de vendor/laravel/sail/runtimes/8.4,
 #    así que en un clone limpio (sin vendor/) el build de docker compose
@@ -165,29 +206,13 @@ echo -e "${GREEN}>>> Actualizando dependencias...${NC}"
 run_or_fail "composer install dentro del contenedor falló." \
     docker compose exec -T "$APP_CONTAINER" composer install --ignore-platform-reqs
 
-# 11. Migraciones por carpeta (dinámico).
-# Cada carpeta en database/migrations/ es un módulo y cada migración ya fija
-# su propia conexión con `protected $connection`, así que basta con mapear
-# carpeta → conexión. Este proyecto nace con solo 3 conexiones fijas
-# (dblcs = negocio propio, dbsiaw = usuarios/roles/permisos, dbsincro =
-# infra/ledger) — a diferencia de un esquema con una conexión por módulo,
-# aquí Siaw y Sincro son casos especiales y todo lo demás cae en dblcs.
-# Un módulo de negocio nuevo (carpeta nueva bajo database/migrations/) se
-# recoge solo sin tocar este script, siempre que use la conexión dblcs.
-echo -e "${GREEN}>>> Ejecutando migraciones (por módulo, auto-detectadas)...${NC}"
-for dir in database/migrations/*/; do
-    [ -d "$dir" ] || continue
-    module="$(basename "$dir")"
-    case "$module" in
-        Siaw)   connection="dbsiaw" ;;
-        Sincro) connection="dbsincro" ;;
-        *)      connection="dblcs" ;;
-    esac
-    echo -e "${BLUE}  → ${module}  (conexión: ${connection})${NC}"
-    run_or_fail "Migraciones de ${module} fallaron." \
-        docker compose exec -T "$APP_CONTAINER" \
-            php artisan migrate --path="database/migrations/${module}" --database="${connection}" --force
-done
+# 11. Migraciones. Un solo "migrate --force", sin --path ni --database:
+# AppServiceProvider registra cada carpeta de database/migrations/ (Siaw,
+# Sincro, y las de negocio que se agreguen), cada migración fija su propia
+# $connection y el ledger "migrations" vive centralizado en dbsincro
+# (CentralMigrationRepository). Una carpeta nueva se recoge sola.
+echo -e "${GREEN}>>> Ejecutando migraciones (ledger central en dbsincro)...${NC}"
+run_or_fail "Las migraciones fallaron."     docker compose exec -T "$APP_CONTAINER" php artisan migrate --force
 
 # 12. Limpiar caché (DESPUÉS de las migraciones para asegurar que las tablas existan)
 echo -e "${GREEN}>>> Limpiando caché...${NC}"
@@ -230,7 +255,7 @@ echo -e "  Aplicación:        ${GREEN}http://localhost:${APP_PORT}${NC}"
 echo -e "  Swagger API:       ${GREEN}http://localhost:${APP_PORT}/api/documentation${NC}"
 echo -e "  Base de datos:     ${GREEN}localhost:${DB_PORT}${NC}  (lcs_db)"
 # Listado dinámico: mismas entradas DB_<MODULO>_DATABASE del .env que se
-# crearon en el paso 4c (array DB_DATABASE_LINES). Un módulo nuevo aparece
+# crearon al inicio (array DB_DATABASE_LINES). Un módulo nuevo aparece
 # aquí solo, sin tocar este bloque.
 _db_total=${#DB_DATABASE_LINES[@]}
 _db_i=0

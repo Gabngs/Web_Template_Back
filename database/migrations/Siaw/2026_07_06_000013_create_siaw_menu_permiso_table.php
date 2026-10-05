@@ -13,11 +13,12 @@ return new class extends Migration
         // Pivot que vincula un menú con el permiso can_view_* que lo desbloquea.
         // Si un usuario/rol tiene ese permiso → el menú aparece en su navegación.
         Schema::connection($this->connection)->create('siaw_menu_permiso', function (Blueprint $table) {
-            $table->bigInteger('pkid')->autoIncrement();
-            $table->string('id', 36)->unique()->index();
+            $table->bigIncrements('pkid');
+            $table->uuid('id')->unique();
 
             $table->bigInteger('menu_id')->index();    // → siaw_menus.pkid
             $table->bigInteger('permiso_id')->index(); // → siaw_content_permisos.pkid (solo can_view_*)
+            $table->boolean('activo')->default(true);
 
             $table->bigInteger('created_by_id')->nullable()->index();
             $table->bigInteger('updated_by_id')->nullable()->index();

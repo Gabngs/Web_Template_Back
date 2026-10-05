@@ -11,13 +11,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::connection($this->connection)->create('siaw_permiso_usuario', function (Blueprint $table) {
-            $table->bigInteger('pkid')->autoIncrement();
-            $table->string('id', 36)->unique()->index();
+            $table->bigIncrements('pkid');
+            $table->uuid('id')->unique();
             $table->bigInteger('permiso_id')->index();  // → siaw_content_permisos.pkid
             $table->bigInteger('usuario_id')->index();  // → siaw_usuarios.pkid
             // 1 = permitido, 0 = denegado — sobreescribe el permiso heredado por rol
             $table->boolean('permitido')->default(true);
+            $table->boolean('activo')->default(true);
+            $table->bigInteger('created_by_id')->nullable()->index();
+            $table->bigInteger('updated_by_id')->nullable()->index();
+            $table->bigInteger('deleted_by_id')->nullable()->index();
             $table->timestamps();
+            $table->softDeletes();
 
             $table->unique(['permiso_id', 'usuario_id']);
         });

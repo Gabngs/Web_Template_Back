@@ -11,12 +11,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::connection($this->connection)->create('siaw_sistemas', function (Blueprint $table) {
-            $table->bigInteger('pkid')->autoIncrement();
-            $table->string('id', 36)->unique()->index();
+            $table->bigIncrements('pkid');
+            $table->uuid('id')->unique();
 
             $table->string('codigo', 20)->unique();
             $table->string('descripcion', 100);
-            $table->tinyInteger('activo')->default(1);
+            $table->boolean('activo')->default(true);
 
             $table->bigInteger('created_by_id')->nullable()->index();
             $table->bigInteger('updated_by_id')->nullable()->index();

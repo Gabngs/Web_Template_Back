@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use Database\Seeders\Lcs\LcsCatalogoSeeder;
 use Database\Seeders\Siaw\SiawRolesSeeder;
 use Database\Seeders\Siaw\SiawUsuarioAdminSeeder;
 use Database\Seeders\Siaw\SiawModelosAdminSeeder;
@@ -32,6 +33,7 @@ class DatabaseSeeder extends Seeder
             SiawDashboardAdminSeeder::class,  // 8. content_model 'dashboard' + can_view_dashboard
             SiawSistemasAdminSeeder::class,   // 9. content_model 'sistemas' + sus 4 permisos
             SiawMenusAdminSeeder::class,      // 10. content_model 'menus' + árbol base del sidebar
+            LcsCatalogoSeeder::class,         // 11. catálogo estándar catalogo_tipodato (dblcs)
         ];
 
         // db:seed corre en cada deploy (k8s/05-job-migrate.yaml). Sin este

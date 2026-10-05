@@ -11,8 +11,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::connection($this->connection)->create('siaw_usuarios', function (Blueprint $table) {
-            $table->bigIncrements('pkid')->index();
-            $table->string('id', 36)->unique()->index();
+            $table->bigIncrements('pkid');
+            $table->uuid('id')->unique();
             $table->string('nombre', 100);
             $table->string('apellidos', 100)->nullable();
             $table->string('email', 150)->unique();
@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('password');
             $table->string('remember_token', 100)->nullable();
             $table->bigInteger('rol_id')->nullable()->index();
-            $table->tinyInteger('activo')->default(1);
+            $table->boolean('activo')->default(true);
             $table->timestamp('email_verified_at')->nullable();
             $table->timestamp('ultimo_acceso_en')->nullable();
             $table->tinyInteger('debe_cambiar_password')->default(0);

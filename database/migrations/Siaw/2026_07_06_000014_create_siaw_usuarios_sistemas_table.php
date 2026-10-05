@@ -10,22 +10,25 @@ return new class extends Migration
 
     public function up(): void
     {
-        Schema::connection($this->connection)->create('siaw_permiso_rol', function (Blueprint $table) {
+        Schema::connection($this->connection)->create('siaw_usuarios_sistemas', function (Blueprint $table) {
             $table->bigIncrements('pkid');
             $table->uuid('id')->unique();
-            $table->bigInteger('permiso_id')->index();  // → siaw_content_permisos.pkid
-            $table->bigInteger('rol_id')->index();      // → siaw_roles.pkid
+            $table->bigInteger('usuario_id')->index();  // → siaw_usuarios.pkid
+            $table->bigInteger('sistema_id')->index();  // → siaw_sistemas.pkid
             $table->boolean('activo')->default(true);
+
             $table->bigInteger('created_by_id')->nullable()->index();
             $table->bigInteger('updated_by_id')->nullable()->index();
             $table->bigInteger('deleted_by_id')->nullable()->index();
             $table->timestamps();
             $table->softDeletes();
+
+            $table->unique(['usuario_id', 'sistema_id']);
         });
     }
 
     public function down(): void
     {
-        Schema::connection($this->connection)->dropIfExists('siaw_permiso_rol');
+        Schema::connection($this->connection)->dropIfExists('siaw_usuarios_sistemas');
     }
 };

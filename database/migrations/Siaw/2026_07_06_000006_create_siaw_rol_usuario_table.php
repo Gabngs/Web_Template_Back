@@ -11,10 +11,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::connection($this->connection)->create('siaw_rol_usuario', function (Blueprint $table) {
-            $table->bigInteger('pkid')->autoIncrement();
-            $table->string('id', 36)->unique()->index();
+            $table->bigIncrements('pkid');
+            $table->uuid('id')->unique();
             $table->bigInteger('usuario_id')->index();  // → siaw_usuarios.pkid
             $table->bigInteger('rol_id')->index();      // → siaw_roles.pkid
+            $table->boolean('activo')->default(true);
 
             $table->bigInteger('created_by_id')->nullable()->index();
             $table->bigInteger('updated_by_id')->nullable()->index();

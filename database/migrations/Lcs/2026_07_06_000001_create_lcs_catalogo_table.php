@@ -6,15 +6,16 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    protected $connection = 'dbsiaw';
+    protected $connection = 'dblcs';
 
     public function up(): void
     {
-        Schema::connection($this->connection)->create('siaw_permiso_rol', function (Blueprint $table) {
+        Schema::connection($this->connection)->create('lcs_catalogo', function (Blueprint $table) {
             $table->bigIncrements('pkid');
             $table->uuid('id')->unique();
-            $table->bigInteger('permiso_id')->index();  // → siaw_content_permisos.pkid
-            $table->bigInteger('rol_id')->index();      // → siaw_roles.pkid
+            $table->string('codigo', 60)->unique();      // ej: 'catalogo_tipodato'
+            $table->string('nombre', 150);
+            $table->string('descripcion', 255)->nullable();
             $table->boolean('activo')->default(true);
             $table->bigInteger('created_by_id')->nullable()->index();
             $table->bigInteger('updated_by_id')->nullable()->index();
@@ -26,6 +27,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::connection($this->connection)->dropIfExists('siaw_permiso_rol');
+        Schema::connection($this->connection)->dropIfExists('lcs_catalogo');
     }
 };

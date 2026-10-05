@@ -11,8 +11,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::connection($this->connection)->create('siaw_menus', function (Blueprint $table) {
-            $table->bigInteger('pkid')->autoIncrement();
-            $table->string('id', 36)->unique()->index();
+            $table->bigIncrements('pkid');
+            $table->uuid('id')->unique();
 
             $table->bigInteger('sistema_id')->index();             // → siaw_sistemas.pkid
             $table->bigInteger('parent_id')->nullable()->index();  // → siaw_menus.pkid (submenú)
@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('ruta', 255)->nullable();          // ruta Angular: /clientes, /reservas
             $table->string('nombre_icon', 100)->nullable();   // ej: pi pi-users (PrimeNG/PrimeIcons)
             $table->unsignedSmallInteger('orden')->default(0);
-            $table->tinyInteger('activo')->default(1);
+            $table->boolean('activo')->default(true);
             $table->tinyInteger('dashboard')->default(0);     // ¿aparece en el dashboard?
             $table->string('clave', 100)->index()->nullable(); // materialized path: pkids de ancestros. Ej: "3", "3-7". Se asigna post-insert.
 

@@ -11,14 +11,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::connection($this->connection)->create('siaw_content_model', function (Blueprint $table) {
-            $table->bigInteger('pkid')->autoIncrement();
-            $table->string('id', 36)->unique()->index();
+            $table->bigIncrements('pkid');
+            $table->uuid('id')->unique();
 
             // 'siaw' o el app_label del módulo de negocio que registre el modelo
             $table->string('app_label', 20);
             // nombre único del modelo: 'clientes', 'ventas', etc.
             $table->string('app_model', 100)->unique();
             $table->string('nombre_display', 150)->nullable();
+            // Un content model pertenece a un sistema (AGH, NEXO, ...); sus permisos
+            // heredan este valor. Nullable: app_label 'siaw' no es un sistema.
+            $table->bigInteger('sistema_id')->nullable()->index();   // → siaw_sistemas.pkid
+            $table->boolean('activo')->default(true);
 
             $table->bigInteger('created_by_id')->nullable()->index();
             $table->bigInteger('updated_by_id')->nullable()->index();
