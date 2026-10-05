@@ -61,17 +61,20 @@ ensure_env_var DB_CACHE_CONNECTION "dbsincro"
 
 # 1c. Puertos (APP_PORT y FORWARD_DB_PORT, los usa docker-compose.yml).
 # Uso:  ./start.sh -p 9000 -d 3024
+#       ./start.sh --rebuild      (fuerza build + up aunque ya esté levantado)
 #       ./start.sh --port 9000 --db-port 3024
 # Sin argumentos y con terminal interactiva, pregunta (Enter = valor actual).
 APP_PORT_ARG=""
 DB_PORT_ARG=""
+FORCE_REBUILD=0
 while [ $# -gt 0 ]; do
     case "$1" in
         -p|--port)     APP_PORT_ARG="${2:-}"; shift 2 || shift ;;
         --port=*)      APP_PORT_ARG="${1#--port=}"; shift ;;
         -d|--db-port)  DB_PORT_ARG="${2:-}"; shift 2 || shift ;;
         --db-port=*)   DB_PORT_ARG="${1#--db-port=}"; shift ;;
-        *)             fail "Argumento desconocido: $1 (usa -p/--port y -d/--db-port)" ;;
+        -r|--rebuild)  FORCE_REBUILD=1; shift ;;
+        *)             fail "Argumento desconocido: $1 (usa -p/--port, -d/--db-port y -r/--rebuild)" ;;
     esac
 done
 
@@ -114,15 +117,31 @@ if [ ! -f "vendor/laravel/sail/runtimes/8.4/Dockerfile" ]; then
             composer install --ignore-platform-reqs
 fi
 
-# 3. Construir imagen base primero (queue y scheduler la reutilizan)
-echo -e "${GREEN}>>> Construyendo imagen base Laravel...${NC}"
-run_or_fail "El build de la imagen Docker falló. Revisa el log de arriba (docker compose build)." \
-    docker compose build lcs_laravel_backend
+# 3-4. Build + up solo si hace falta. Si los contenedores ya están corriendo
+# con los puertos del .env, se omite (re-ejecutar el script no relevanta nada).
+# Se levanta de nuevo si: falta algún contenedor, cambió un puerto, o se pasó
+# -r/--rebuild.
+ALREADY_UP=1
+for svc in lcs_laravel_backend lcs_queue lcs_scheduler lcs_db lcs_redis; do
+    [ "$(docker inspect -f '{{.State.Running}}' "$svc" 2>/dev/null || echo false)" = "true" ] || ALREADY_UP=0
+done
+if [ "$ALREADY_UP" = "1" ]; then
+    want_app="$(grep '^APP_PORT=' .env | cut -d'=' -f2 | tr -d ' ')"
+    want_db="$(grep '^FORWARD_DB_PORT=' .env | cut -d'=' -f2 | tr -d ' ')"
+    have_app="$(docker compose port lcs_laravel_backend 80 2>/dev/null | awk -F: '{print $NF}')"
+    have_db="$(docker compose port lcs_db 3306 2>/dev/null | awk -F: '{print $NF}')"
+    [ "$have_app" = "$want_app" ] && [ "$have_db" = "$want_db" ] || ALREADY_UP=0
+fi
 
-# 4. Levantar todos los contenedores
-echo -e "${GREEN}>>> Levantando contenedores Docker...${NC}"
-run_or_fail "docker compose up -d falló." \
-    docker compose up -d
+if [ "$ALREADY_UP" = "1" ] && [ "$FORCE_REBUILD" = "0" ]; then
+    echo -e "${YELLOW}>>> Contenedores ya levantados — se omite build/up (usa -r para forzar).${NC}"
+else
+    echo -e "${GREEN}>>> Construyendo imagen base Laravel...${NC}"
+    run_or_fail "El build de la imagen Docker falló. Revisa el log de arriba (docker compose build)."         docker compose build lcs_laravel_backend
+
+    echo -e "${GREEN}>>> Levantando contenedores Docker...${NC}"
+    run_or_fail "docker compose up -d falló."         docker compose up -d
+fi
 
 # 4b. Verificar que el contenedor de la app realmente quedó corriendo antes
 #     de seguir — si no, todos los "docker compose exec" de abajo fallarían
