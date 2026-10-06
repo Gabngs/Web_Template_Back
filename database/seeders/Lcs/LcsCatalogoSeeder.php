@@ -10,8 +10,8 @@ use Illuminate\Support\Str;
  * Siembra el catálogo estándar `catalogo_tipodato` (lcs_catalogo +
  * lcs_catalogo_det). Lo usa siaw_parametros.tipodato_id.
  *
- * El orden de inserción fija los pkid (1..8): son las constantes
- * LcsCatalogo::TIPODATO y LcsCatalogoDet::TIPODATO_*. No reordenar.
+ * El código PHP resuelve cada valor por su `codigo`
+ *, no por pkid.
  */
 class LcsCatalogoSeeder extends Seeder
 {

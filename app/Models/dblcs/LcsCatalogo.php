@@ -3,6 +3,7 @@
 namespace App\Models\dblcs;
 
 use App\Models\dbsiaw\SiawUsuarios;
+use App\Filters\Lcs\LcsCatalogoFilters;
 use Essa\APIToolKit\Filters\Filterable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,8 +14,7 @@ class LcsCatalogo extends Model
 {
     use SoftDeletes, Filterable;
 
-    // pkid estable de los catálogos sembrados (ver LcsCatalogoSeeder).
-    public const TIPODATO = 1;
+    protected string $default_filters = LcsCatalogoFilters::class;
 
     protected $connection   = 'dblcs';
     protected $table        = 'lcs_catalogo';

@@ -3,6 +3,7 @@
 namespace App\Models\dblcs;
 
 use App\Models\dbsiaw\SiawUsuarios;
+use App\Filters\Lcs\LcsCatalogoDetFilters;
 use Essa\APIToolKit\Filters\Filterable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,15 +14,7 @@ class LcsCatalogoDet extends Model
 {
     use SoftDeletes, Filterable;
 
-    // pkid estable de los valores de 'catalogo_tipodato' (ver LcsCatalogoSeeder).
-    public const TIPODATO_STRING   = 1;
-    public const TIPODATO_INT      = 2;
-    public const TIPODATO_DECIMAL  = 3;
-    public const TIPODATO_BOOLEAN  = 4;
-    public const TIPODATO_DATE     = 5;
-    public const TIPODATO_TIME     = 6;
-    public const TIPODATO_DATETIME = 7;
-    public const TIPODATO_JSON     = 8;
+    protected string $default_filters = LcsCatalogoDetFilters::class;
 
     protected $connection   = 'dblcs';
     protected $table        = 'lcs_catalogo_det';
@@ -49,7 +42,7 @@ class LcsCatalogoDet extends Model
         'activo' => 'boolean',
     ];
 
-    public function catalogo(): BelongsTo
+    public function lcs_catalogo(): BelongsTo
     {
         return $this->belongsTo(LcsCatalogo::class, 'catalogo_id', 'pkid');
     }
