@@ -2,21 +2,26 @@
 
 namespace App\Models\dbsiaw;
 
+use App\Filters\Siaw\SiawParametrosFilters;
 use App\Models\dblcs\LcsCatalogoDet;
 use Essa\APIToolKit\Filters\Filterable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class SiawParametros extends Model
 {
-    use SoftDeletes, Filterable;
+    use HasFactory, SoftDeletes, Filterable;
 
-    protected $connection   = 'dbsiaw';
-    protected $table        = 'siaw_parametros';
-    protected $primaryKey   = 'id';
+    protected string $default_filters = SiawParametrosFilters::class;
+
+    protected $connection  = 'dbsiaw';
+    protected $table       = 'siaw_parametros';
+
+    protected $primaryKey  = 'id';
     public    $incrementing = false;
-    protected $keyType      = 'string';
+    protected $keyType     = 'string';
 
     protected $fillable = [
         'id',
@@ -40,7 +45,6 @@ class SiawParametros extends Model
         return $this->belongsTo(SiawSistemas::class, 'sistema_id', 'pkid');
     }
 
-    // Catálogo 'catalogo_tipodato' vive en la base de negocio (dblcs).
     public function lcs_catalogo_det(): BelongsTo
     {
         return $this->belongsTo(LcsCatalogoDet::class, 'tipodato_id', 'pkid');

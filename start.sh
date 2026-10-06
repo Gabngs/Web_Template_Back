@@ -48,6 +48,7 @@ ensure_env_var WWWGROUP "$(id -g 2>/dev/null || echo 1000)"
 # "sail" hardcodeado a propósito: database/docker-init/01_init_databases.sql
 # otorga privilegios a ese usuario; si difiere, los GRANT fallan.
 ensure_env_var DB_USERNAME "sail"
+ensure_env_var L5_SWAGGER_GENERATE_ALWAYS "true"
 ensure_env_var DB_PASSWORD "123456"
 
 # Conexiones de infraestructura: sessions/jobs/cache viven en el módulo Sincro
@@ -269,9 +270,17 @@ else
 fi
 
 # 15. Optimizar caché
-echo -e "${GREEN}>>> Optimizando configuración y rutas...${NC}"
-docker compose exec -T "$APP_CONTAINER" php artisan config:cache 2>/dev/null || true
-docker compose exec -T "$APP_CONTAINER" php artisan route:cache  2>/dev/null || true
+# Solo se cachea en producción: en desarrollo la caché de rutas/config hace que
+# los controllers/rutas nuevos y los cambios de .env no se vean sin route:clear.
+APP_ENV_VAL="$(grep '^APP_ENV=' .env | cut -d'=' -f2 | tr -d ' \r')"
+if [ "$APP_ENV_VAL" = "production" ]; then
+    echo -e "${GREEN}>>> Optimizando configuración y rutas...${NC}"
+    docker compose exec -T "$APP_CONTAINER" php artisan config:cache 2>/dev/null || true
+    docker compose exec -T "$APP_CONTAINER" php artisan route:cache  2>/dev/null || true
+else
+    echo -e "${GREEN}>>> Limpiando cachés (entorno ${APP_ENV_VAL:-local}: rutas y config dinámicas)...${NC}"
+    docker compose exec -T "$APP_CONTAINER" php artisan optimize:clear 2>/dev/null || true
+fi
 
 # 16. Mostrar puertos desde .env
 APP_PORT=$(grep "^APP_PORT=" .env | cut -d'=' -f2 | tr -d ' '); APP_PORT=${APP_PORT:-8844}
