@@ -32,18 +32,21 @@ class SiawContentModel extends Model
         'deleted_by_id',
     ];
 
-    public function created_by()
+    public function created_by(): BelongsTo
     {
         return $this->belongsTo(SiawUsuarios::class, 'created_by_id', 'pkid');
     }
-    public function updated_by()
+
+    public function updated_by(): BelongsTo
     {
         return $this->belongsTo(SiawUsuarios::class, 'updated_by_id', 'pkid');
     }
-    public function deleted_by()
+
+    public function deleted_by(): BelongsTo
     {
         return $this->belongsTo(SiawUsuarios::class, 'deleted_by_id', 'pkid');
     }
+
     public function permisos(): HasMany
     {
         return $this->hasMany(SiawContentPermisos::class, 'content_model_id', 'pkid');

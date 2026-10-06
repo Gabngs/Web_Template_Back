@@ -16,10 +16,12 @@ class UpdateParametrosRequest extends FormRequest
 
     public function rules(): array
     {
+        $actual = $this->route('siaw_parametros');
+
         return array_merge(
             $this->getRelacionesRules('sometimes'),
             [
-                'codigo' => "sometimes|string|max:80",
+                'codigo' => ['sometimes', 'string', 'max:80', $this->uniqueCodigoRule($actual?->id, $actual?->sistema_id)],
                 'descripcion' => "sometimes|string|max:255",
                 'valor' => "nullable|string|max:255",
                 'activo' => "sometimes|boolean",
@@ -34,6 +36,7 @@ class UpdateParametrosRequest extends FormRequest
             [
                 'codigo.string' => 'El campo codigo debe ser texto',
                 'codigo.max' => 'El campo codigo no puede superar 80 caracteres',
+                'codigo.unique' => 'Ya existe un parámetro con ese codigo para el sistema indicado',
                 'descripcion.string' => 'El campo descripcion debe ser texto',
                 'descripcion.max' => 'El campo descripcion no puede superar 255 caracteres',
                 'valor.string' => 'El campo valor debe ser texto',

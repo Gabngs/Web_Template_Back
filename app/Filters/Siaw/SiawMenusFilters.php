@@ -2,26 +2,62 @@
 
 namespace App\Filters\Siaw;
 
-use Essa\APIToolKit\Filters\QueryFilters;
-use App\Models\dbsiaw\SiawSistemas;
 use App\Models\dbsiaw\SiawMenus;
+use App\Models\dbsiaw\SiawSistemas;
+use Essa\APIToolKit\Filters\QueryFilters;
+
 class SiawMenusFilters extends QueryFilters
 {
-    protected array $allowedFilters  = ['activo', 'dashboard'];
-    protected array $allowedSorts    = ['orden', 'titulo', 'created_at'];
-    protected array $allowedIncludes = ['sistema', 'parent', 'hijos', 'permisos'];
-    protected array $columnSearch    = ['titulo', 'descripcion'];
+    protected array $columnSearch = [
+        'titulo',
+        'descripcion',
+        'ruta',
+    ];
 
+    protected array $allowedFilters = [
+        'titulo',
+        'ruta',
+        'activo',
+        'dashboard',
+    ];
 
-    protected function sistema_id($value)
+    protected array $allowedIncludes = [
+        'sistema',
+        'parent',
+        'hijos',
+        'permisos',
+        'created_by',
+        'updated_by',
+        'deleted_by',
+    ];
+
+    protected array $allowedSorts = [
+        'orden',
+        'titulo',
+        'activo',
+        'created_at',
+        'updated_at',
+    ];
+
+    public function sistema_id($value)
     {
-        $sistemaPkid = SiawSistemas::where('id', $value)->value('pkid');
-        return $this->builder->where('sistema_id', $sistemaPkid);
+        if ($value === null || $value === '') {
+            return $this->builder;
+        }
+
+        $pkid = SiawSistemas::where('id', $value)->value('pkid');
+
+        return $this->builder->where('sistema_id', $pkid ?? 0);
     }
 
-    protected function parent_id($value)
+    public function parent_id($value)
     {
-        $parentPkid = SiawMenus::where('id', $value)->value('pkid');
-        return $this->builder->where('parent_id', $parentPkid);
+        if ($value === null || $value === '') {
+            return $this->builder;
+        }
+
+        $pkid = SiawMenus::where('id', $value)->value('pkid');
+
+        return $this->builder->where('parent_id', $pkid ?? 0);
     }
 }

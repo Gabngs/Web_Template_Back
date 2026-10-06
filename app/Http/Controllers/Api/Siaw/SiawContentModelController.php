@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api\Siaw;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Siaw\SiawContentModel\StoreRequest;
-use App\Http\Requests\Siaw\SiawContentModel\UpdateRequest;
+use App\Http\Traits\HandlesIndexResponse;
+use App\Http\Requests\Siaw\ContentModel\StoreContentModelRequest;
+use App\Http\Requests\Siaw\ContentModel\UpdateContentModelRequest;
 use App\Http\Resources\Siaw\SiawContentModelResource;
+use App\Http\Resources\Siaw\SiawContentModelTinyResource;
 use App\Models\dbsiaw\SiawContentModel;
 use App\Services\Siaw\SiawContentModelService;
 use Essa\APIToolKit\Api\ApiResponse;
@@ -13,21 +15,31 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * @OA\Tag(name="ContentModel")
+ * @OA\Tag(name="siaw_content_model", description="Content model")
  */
 class SiawContentModelController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, HandlesIndexResponse;
 
     public function __construct(private readonly SiawContentModelService $service) {}
 
     /**
      * @OA\Get(
      *      path="/api/siaw_content_model",
-     *      tags={"ContentModel"},
+     *      tags={"siaw_content_model"},
      *      summary="Listar el catálogo de modelos de contenido",
      *      security={{"bearerAuth":{}}},
-     *      @OA\Parameter(name="paginate", in="query", @OA\Schema(type="boolean")),
+     *      @OA\Parameter(name="paginate", in="query", description="true devuelve la respuesta paginada con `meta`", @OA\Schema(type="boolean")),
+     *      @OA\Parameter(name="page", in="query", @OA\Schema(type="integer")),
+     *      @OA\Parameter(name="per_page", in="query", @OA\Schema(type="integer")),
+     *      @OA\Parameter(name="tiny", in="query", description="true devuelve SiawContentModelTinySchema", @OA\Schema(type="boolean")),
+     *      @OA\Parameter(name="with_permisos", in="query", description="true incluye los permisos de cada modelo", @OA\Schema(type="boolean")),
+     *      @OA\Parameter(name="sistema_id", in="query", description="Filtro exacto por sistema_id", @OA\Schema(type="string", format="uuid")),
+     *      @OA\Parameter(name="app_label", in="query", description="Filtro exacto por app_label", @OA\Schema(type="string")),
+     *      @OA\Parameter(name="app_model", in="query", description="Filtro exacto por app_model", @OA\Schema(type="string")),
+     *      @OA\Parameter(name="search", in="query", description="Búsqueda de texto libre", @OA\Schema(type="string")),
+     *      @OA\Parameter(name="sorts", in="query", description="Orden: campo o -campo (descendente)", @OA\Schema(type="string")),
+     *      @OA\Parameter(name="include", in="query", description="Relaciones a cargar, separadas por coma (ej. permisos)", @OA\Schema(type="string")),
      *      @OA\Response(
      *          response=200,
      *          description="Catálogo de modelos registrados",
@@ -41,15 +53,21 @@ class SiawContentModelController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $data = $this->service->index($request->boolean('paginate'));
+        $paginate = $request->boolean('paginate');
 
-        return $this->responseSuccess('Modelos obtenidos correctamente', SiawContentModelResource::collection($data));
+        $data = $this->service->index($paginate);
+
+        $resource = $request->boolean('tiny')
+            ? SiawContentModelTinyResource::class
+            : SiawContentModelResource::class;
+
+        return $this->responseIndex($data, $resource, $paginate, 'Modelos obtenidos correctamente');
     }
 
     /**
      * @OA\Get(
      *      path="/api/siaw_content_model/{siaw_content_model}",
-     *      tags={"ContentModel"},
+     *      tags={"siaw_content_model"},
      *      summary="Ver un modelo de contenido por UUID",
      *      security={{"bearerAuth":{}}},
      *      @OA\Parameter(name="siaw_content_model", in="path", required=true, @OA\Schema(type="string", format="uuid")),
@@ -75,7 +93,7 @@ class SiawContentModelController extends Controller
     /**
      * @OA\Post(
      *      path="/api/siaw_content_model",
-     *      tags={"ContentModel"},
+     *      tags={"siaw_content_model"},
      *      summary="Registrar un modelo de contenido",
      *      description="Solo superuser/admin.",
      *      security={{"bearerAuth":{}}},
@@ -101,7 +119,7 @@ class SiawContentModelController extends Controller
      *      @OA\Response(response=422, description="Validación fallida")
      * )
      */
-    public function store(StoreRequest $request): JsonResponse
+    public function store(StoreContentModelRequest $request): JsonResponse
     {
         $model = $this->service->store($request->validated());
 
@@ -111,7 +129,7 @@ class SiawContentModelController extends Controller
     /**
      * @OA\Put(
      *      path="/api/siaw_content_model/{siaw_content_model}",
-     *      tags={"ContentModel"},
+     *      tags={"siaw_content_model"},
      *      summary="Actualizar un modelo de contenido",
      *      description="Solo superuser/admin.",
      *      security={{"bearerAuth":{}}},
@@ -136,7 +154,7 @@ class SiawContentModelController extends Controller
      *      @OA\Response(response=422, description="Validación fallida")
      * )
      */
-    public function update(UpdateRequest $request, SiawContentModel $siaw_content_model): JsonResponse
+    public function update(UpdateContentModelRequest $request, SiawContentModel $siaw_content_model): JsonResponse
     {
         $model = $this->service->update($siaw_content_model, $request->validated());
 
@@ -146,7 +164,7 @@ class SiawContentModelController extends Controller
     /**
      * @OA\Delete(
      *      path="/api/siaw_content_model/{siaw_content_model}",
-     *      tags={"ContentModel"},
+     *      tags={"siaw_content_model"},
      *      summary="Eliminar un modelo de contenido",
      *      description="Solo superuser/admin.",
      *      security={{"bearerAuth":{}}},

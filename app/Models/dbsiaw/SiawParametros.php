@@ -5,14 +5,13 @@ namespace App\Models\dbsiaw;
 use App\Filters\Siaw\SiawParametrosFilters;
 use App\Models\dblcs\LcsCatalogoDet;
 use Essa\APIToolKit\Filters\Filterable;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class SiawParametros extends Model
 {
-    use HasFactory, SoftDeletes, Filterable;
+    use SoftDeletes, Filterable;
 
     protected string $default_filters = SiawParametrosFilters::class;
 

@@ -2,34 +2,30 @@
 
 namespace App\Http\Requests\Siaw\Traits;
 
-use Illuminate\Validation\Rule;
-
 trait SiawContentModelRules
 {
-    protected function fieldRules(?string $ignoreId = null): array
-    {
-        $uniqueModel = Rule::unique('dbsiaw.siaw_content_model', 'app_model')->withoutTrashed();
-        if ($ignoreId) {
-            $uniqueModel = $uniqueModel->ignore($ignoreId, 'id');
-        }
+    use SiawSistemasRulesFk;
 
-        return [
-            'app_label'      => ['string', 'max:100'],
-            'app_model'      => ['string', 'max:100', $uniqueModel],
-            'nombre_display' => ['string', 'max:255'],
-            'sistema_id'     => ['string', 'exists:dbsiaw.siaw_sistemas,id'],
-        ];
+    /**
+     * Reglas para campos que son FK (llegan como UUID desde el frontend).
+     * La validación 'exists' confirma que el UUID existe en la tabla antes de persistir; la regla de cada
+     * FK vive en su trait compartido (con la conexión y el soft delete de esa tabla).
+     * El mapeo UUID -> PKID lo hace el Service después (ver Mapeo UUID PKID.md).
+     *
+     * $required: 'required' (Store) o 'sometimes' (Update) -- lo único que cambia entre los dos
+     * FormRequests; las FK nullable de la tabla siguen siendo 'nullable' en ambos.
+     */
+    protected function getRelacionesRules(string $required = 'required'): array
+    {
+        return array_merge(
+            $this->getSistemasRules('sistema_id', $required),
+        );
     }
 
-    public function messages(): array
+    protected function getRelacionesMensajes(): array
     {
-        return [
-            'app_label.required'      => 'El label de la app es requerido.',
-            'app_model.required'      => 'El modelo es requerido.',
-            'app_model.unique'        => 'El modelo ya existe.',
-            'nombre_display.required' => 'El nombre de display es requerido.',
-            'sistema_id.required'     => 'El sistema es requerido.',
-            'sistema_id.exists'       => 'El sistema seleccionado no existe.',
-        ];
+        return array_merge(
+            $this->getSistemasMensajes('sistema_id'),
+        );
     }
 }

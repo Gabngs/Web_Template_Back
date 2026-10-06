@@ -21,20 +21,36 @@ class SiawUsuariosService extends AbstractModuleService
 
     public function __construct(protected CrudService $crud) {}
 
+    /**
+     * Relaciones eager-loaded en index/show, y en la respuesta de store/update.
+     * Centralizada acá — el Controller nunca decide qué relaciones cargar.
+     */
+    const RELATIONS = [
+        'rol',
+        'created_by', 'updated_by', 'deleted_by',
+    ];
+
+    /**
+     * Mapeo de campos UUID -> PKID.
+     * Clave: nombre del campo en $data que llega del frontend (UUID)
+     * Valor: clase del modelo donde se busca ese UUID para obtener su pkid
+     */
     protected array $uuidMapping = [
         'rol_id' => SiawRoles::class,
     ];
 
     public function index(bool $paginate = false): mixed
     {
-        $query = SiawUsuarios::useFilters()->with(['rol']);
+        $query = SiawUsuarios::useFilters()->with(self::RELATIONS);
 
-        return $paginate ? $query->dynamicPaginate() : $query->get();
+        return $paginate
+            ? $query->dynamicPaginate()
+            : $query->get();
     }
 
     public function show(Model $model): Model
     {
-        return $model->load(['rol']);
+        return $model->load(self::RELATIONS);
     }
 
     public function store(array $data): Model
@@ -58,7 +74,7 @@ class SiawUsuariosService extends AbstractModuleService
 
         Mail::to($usuario->email)->send(new UsuarioCreadoMail($usuario, $temporal));
 
-        return $usuario;
+        return $usuario->load(self::RELATIONS);
     }
 
     public function update(Model $model, array $data): Model
@@ -84,7 +100,9 @@ class SiawUsuariosService extends AbstractModuleService
             }
         }
 
-        return $this->crud->update($model, $data, 'actualizar_siaw_usuario');
+        $model = $this->crud->update($model, $data, 'actualizar_siaw_usuario');
+
+        return $model->load(self::RELATIONS);
     }
 
     public function destroy(Model $model): Model

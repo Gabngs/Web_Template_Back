@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api\Siaw;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Siaw\SiawMenus\StoreRequest;
-use App\Http\Requests\Siaw\SiawMenus\UpdateRequest;
+use App\Http\Traits\HandlesIndexResponse;
+use App\Http\Requests\Siaw\Menus\StoreMenusRequest;
+use App\Http\Requests\Siaw\Menus\UpdateMenusRequest;
 use App\Http\Resources\Siaw\SiawMenusResource;
+use App\Http\Resources\Siaw\SiawMenusTinyResource;
 use App\Models\dbsiaw\SiawMenus;
 use App\Services\Siaw\SiawMenusService;
 use Essa\APIToolKit\Api\ApiResponse;
@@ -13,21 +15,31 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * @OA\Tag(name="Menus")
+ * @OA\Tag(name="siaw_menus", description="Menús")
  */
 class SiawMenusController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, HandlesIndexResponse;
 
     public function __construct(private readonly SiawMenusService $service) {}
 
     /**
      * @OA\Get(
      *      path="/api/siaw_menus",
-     *      tags={"Menus"},
+     *      tags={"siaw_menus"},
      *      summary="Árbol de navegación para el sidebar Angular/PrimeNG",
      *      security={{"bearerAuth":{}}},
-     *      @OA\Parameter(name="paginate", in="query", @OA\Schema(type="boolean")),
+     *      @OA\Parameter(name="paginate", in="query", description="true devuelve la respuesta paginada con `meta`", @OA\Schema(type="boolean")),
+     *      @OA\Parameter(name="page", in="query", @OA\Schema(type="integer")),
+     *      @OA\Parameter(name="per_page", in="query", @OA\Schema(type="integer")),
+     *      @OA\Parameter(name="tiny", in="query", description="true devuelve SiawMenusTinySchema", @OA\Schema(type="boolean")),
+     *      @OA\Parameter(name="sistema_id", in="query", description="Filtro exacto por sistema_id", @OA\Schema(type="string", format="uuid")),
+     *      @OA\Parameter(name="parent_id", in="query", description="Filtro exacto por parent_id", @OA\Schema(type="string", format="uuid")),
+     *      @OA\Parameter(name="activo", in="query", description="Filtro exacto por activo", @OA\Schema(type="boolean")),
+     *      @OA\Parameter(name="dashboard", in="query", description="Filtro exacto por dashboard", @OA\Schema(type="boolean")),
+     *      @OA\Parameter(name="search", in="query", description="Búsqueda de texto libre", @OA\Schema(type="string")),
+     *      @OA\Parameter(name="sorts", in="query", description="Orden: campo o -campo (descendente)", @OA\Schema(type="string")),
+     *      @OA\Parameter(name="include", in="query", description="Relaciones a cargar, separadas por coma (ej. hijos,permisos)", @OA\Schema(type="string")),
      *      @OA\Response(
      *          response=200,
      *          description="Menús registrados",
@@ -41,15 +53,21 @@ class SiawMenusController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $data = $this->service->index($request->boolean('paginate'));
+        $paginate = $request->boolean('paginate');
 
-        return $this->responseSuccess('Menús obtenidos correctamente', SiawMenusResource::collection($data));
+        $data = $this->service->index($paginate);
+
+        $resource = $request->boolean('tiny')
+            ? SiawMenusTinyResource::class
+            : SiawMenusResource::class;
+
+        return $this->responseIndex($data, $resource, $paginate, 'Menús obtenidos correctamente');
     }
 
     /**
      * @OA\Get(
      *      path="/api/siaw_menus/{siaw_menu}",
-     *      tags={"Menus"},
+     *      tags={"siaw_menus"},
      *      summary="Ver un menú por UUID",
      *      security={{"bearerAuth":{}}},
      *      @OA\Parameter(name="siaw_menu", in="path", required=true, @OA\Schema(type="string", format="uuid")),
@@ -75,7 +93,7 @@ class SiawMenusController extends Controller
     /**
      * @OA\Post(
      *      path="/api/siaw_menus",
-     *      tags={"Menus"},
+     *      tags={"siaw_menus"},
      *      summary="Registrar un menú",
      *      description="Solo superuser/admin.",
      *      security={{"bearerAuth":{}}},
@@ -106,7 +124,7 @@ class SiawMenusController extends Controller
      *      @OA\Response(response=422, description="Validación fallida")
      * )
      */
-    public function store(StoreRequest $request): JsonResponse
+    public function store(StoreMenusRequest $request): JsonResponse
     {
         $model = $this->service->store($request->validated());
 
@@ -116,7 +134,7 @@ class SiawMenusController extends Controller
     /**
      * @OA\Put(
      *      path="/api/siaw_menus/{siaw_menu}",
-     *      tags={"Menus"},
+     *      tags={"siaw_menus"},
      *      summary="Actualizar un menú",
      *      description="Solo superuser/admin.",
      *      security={{"bearerAuth":{}}},
@@ -146,7 +164,7 @@ class SiawMenusController extends Controller
      *      @OA\Response(response=422, description="Validación fallida")
      * )
      */
-    public function update(UpdateRequest $request, SiawMenus $siaw_menu): JsonResponse
+    public function update(UpdateMenusRequest $request, SiawMenus $siaw_menu): JsonResponse
     {
         $model = $this->service->update($siaw_menu, $request->validated());
 
@@ -156,7 +174,7 @@ class SiawMenusController extends Controller
     /**
      * @OA\Delete(
      *      path="/api/siaw_menus/{siaw_menu}",
-     *      tags={"Menus"},
+     *      tags={"siaw_menus"},
      *      summary="Eliminar un menú",
      *      description="Solo superuser/admin.",
      *      security={{"bearerAuth":{}}},

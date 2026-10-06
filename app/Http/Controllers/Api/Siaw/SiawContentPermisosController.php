@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api\Siaw;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Siaw\SiawContentPermisos\BulkStoreRequest;
-use App\Http\Requests\Siaw\SiawContentPermisos\StoreRequest;
-use App\Http\Requests\Siaw\SiawContentPermisos\UpdateRequest;
+use App\Http\Traits\HandlesIndexResponse;
+use App\Http\Requests\Siaw\ContentPermisos\BulkStoreContentPermisosRequest;
+use App\Http\Requests\Siaw\ContentPermisos\StoreContentPermisosRequest;
+use App\Http\Requests\Siaw\ContentPermisos\UpdateContentPermisosRequest;
 use App\Http\Resources\Siaw\SiawContentPermisosResource;
+use App\Http\Resources\Siaw\SiawContentPermisosTinyResource;
 use App\Models\dbsiaw\SiawContentPermisos;
 use App\Services\Siaw\SiawContentPermisosService;
 use Essa\APIToolKit\Api\ApiResponse;
@@ -14,21 +16,31 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * @OA\Tag(name="ContentPermisos")
+ * @OA\Tag(name="siaw_content_permisos", description="Content permisos")
  */
 class SiawContentPermisosController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, HandlesIndexResponse;
 
     public function __construct(private readonly SiawContentPermisosService $service) {}
 
     /**
      * @OA\Get(
      *      path="/api/siaw_content_permisos",
-     *      tags={"ContentPermisos"},
+     *      tags={"siaw_content_permisos"},
      *      summary="Listar el catálogo de permisos",
      *      security={{"bearerAuth":{}}},
-     *      @OA\Parameter(name="paginate", in="query", @OA\Schema(type="boolean")),
+     *      @OA\Parameter(name="paginate", in="query", description="true devuelve la respuesta paginada con `meta`", @OA\Schema(type="boolean")),
+     *      @OA\Parameter(name="page", in="query", @OA\Schema(type="integer")),
+     *      @OA\Parameter(name="per_page", in="query", @OA\Schema(type="integer")),
+     *      @OA\Parameter(name="tiny", in="query", description="true devuelve SiawContentPermisosTinySchema", @OA\Schema(type="boolean")),
+     *      @OA\Parameter(name="content_model_id", in="query", description="Filtro exacto por content_model_id", @OA\Schema(type="string", format="uuid")),
+     *      @OA\Parameter(name="sistema_id", in="query", description="Filtro exacto por sistema_id", @OA\Schema(type="string", format="uuid")),
+     *      @OA\Parameter(name="app_model", in="query", description="Filtra por app_model del modelo de contenido", @OA\Schema(type="string")),
+     *      @OA\Parameter(name="codename", in="query", description="Filtro exacto por codename", @OA\Schema(type="string")),
+     *      @OA\Parameter(name="search", in="query", description="Búsqueda de texto libre", @OA\Schema(type="string")),
+     *      @OA\Parameter(name="sorts", in="query", description="Orden: campo o -campo (descendente)", @OA\Schema(type="string")),
+     *      @OA\Parameter(name="include", in="query", description="Relaciones a cargar, separadas por coma", @OA\Schema(type="string")),
      *      @OA\Response(
      *          response=200,
      *          description="Catálogo de permisos registrados",
@@ -42,15 +54,21 @@ class SiawContentPermisosController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $data = $this->service->index($request->boolean('paginate'));
+        $paginate = $request->boolean('paginate');
 
-        return $this->responseSuccess('Permisos obtenidos correctamente', SiawContentPermisosResource::collection($data));
+        $data = $this->service->index($paginate);
+
+        $resource = $request->boolean('tiny')
+            ? SiawContentPermisosTinyResource::class
+            : SiawContentPermisosResource::class;
+
+        return $this->responseIndex($data, $resource, $paginate, 'Permisos obtenidos correctamente');
     }
 
     /**
      * @OA\Get(
      *      path="/api/siaw_content_permisos/{siaw_content_permiso}",
-     *      tags={"ContentPermisos"},
+     *      tags={"siaw_content_permisos"},
      *      summary="Ver un permiso por UUID",
      *      security={{"bearerAuth":{}}},
      *      @OA\Parameter(name="siaw_content_permiso", in="path", required=true, @OA\Schema(type="string", format="uuid")),
@@ -76,7 +94,7 @@ class SiawContentPermisosController extends Controller
     /**
      * @OA\Post(
      *      path="/api/siaw_content_permisos",
-     *      tags={"ContentPermisos"},
+     *      tags={"siaw_content_permisos"},
      *      summary="Registrar un permiso",
      *      description="Solo superuser/admin.",
      *      security={{"bearerAuth":{}}},
@@ -101,7 +119,7 @@ class SiawContentPermisosController extends Controller
      *      @OA\Response(response=422, description="Validación fallida")
      * )
      */
-    public function store(StoreRequest $request): JsonResponse
+    public function store(StoreContentPermisosRequest $request): JsonResponse
     {
         $model = $this->service->store($request->validated());
 
@@ -111,7 +129,7 @@ class SiawContentPermisosController extends Controller
     /**
      * @OA\Put(
      *      path="/api/siaw_content_permisos/{siaw_content_permiso}",
-     *      tags={"ContentPermisos"},
+     *      tags={"siaw_content_permisos"},
      *      summary="Actualizar un permiso",
      *      description="Solo superuser/admin.",
      *      security={{"bearerAuth":{}}},
@@ -135,7 +153,7 @@ class SiawContentPermisosController extends Controller
      *      @OA\Response(response=422, description="Validación fallida")
      * )
      */
-    public function update(UpdateRequest $request, SiawContentPermisos $siaw_content_permiso): JsonResponse
+    public function update(UpdateContentPermisosRequest $request, SiawContentPermisos $siaw_content_permiso): JsonResponse
     {
         $model = $this->service->update($siaw_content_permiso, $request->validated());
 
@@ -145,7 +163,7 @@ class SiawContentPermisosController extends Controller
     /**
      * @OA\Delete(
      *      path="/api/siaw_content_permisos/{siaw_content_permiso}",
-     *      tags={"ContentPermisos"},
+     *      tags={"siaw_content_permisos"},
      *      summary="Eliminar un permiso",
      *      description="Solo superuser/admin.",
      *      security={{"bearerAuth":{}}},
@@ -171,7 +189,7 @@ class SiawContentPermisosController extends Controller
     /**
      * @OA\Post(
      *      path="/api/siaw_content_permisos/bulk",
-     *      tags={"ContentPermisos"},
+     *      tags={"siaw_content_permisos"},
      *      summary="Registrar múltiples permisos para un modelo",
      *      description="Solo superuser/admin. Crea múltiples permisos asociados al mismo modelo de contenido.",
      *      security={{"bearerAuth":{}}},
@@ -201,7 +219,7 @@ class SiawContentPermisosController extends Controller
      */
 
 
-    public function bulkCreate(BulkStoreRequest $request): JsonResponse
+    public function bulkCreate(BulkStoreContentPermisosRequest $request): JsonResponse
     {
         $data = $request->validated();
         $createdPermisos = $this->service->bulkCreate($data);

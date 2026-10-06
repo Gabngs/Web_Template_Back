@@ -85,19 +85,22 @@ class SiawUsuarios extends Authenticatable
         return new NewAccessToken($token, $token->getKey() . '|' . $plainTextToken);
     }
 
-    public function created_by()
+    public function created_by(): BelongsTo
     {
         return $this->belongsTo(SiawUsuarios::class, 'created_by_id', 'pkid');
     }
-    public function updated_by()
+
+    public function updated_by(): BelongsTo
     {
         return $this->belongsTo(SiawUsuarios::class, 'updated_by_id', 'pkid');
     }
-    public function deleted_by()
+
+    public function deleted_by(): BelongsTo
     {
         return $this->belongsTo(SiawUsuarios::class, 'deleted_by_id', 'pkid');
     }
-    public function rol()
+
+    public function rol(): BelongsTo
     {
         return $this->belongsTo(SiawRoles::class, 'rol_id', 'pkid');
     }

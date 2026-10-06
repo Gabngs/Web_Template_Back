@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api\Siaw;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Siaw\SiawSistemas\StoreRequest;
-use App\Http\Requests\Siaw\SiawSistemas\UpdateRequest;
+use App\Http\Traits\HandlesIndexResponse;
+use App\Http\Requests\Siaw\Sistemas\StoreSistemasRequest;
+use App\Http\Requests\Siaw\Sistemas\UpdateSistemasRequest;
 use App\Http\Resources\Siaw\SiawSistemasResource;
+use App\Http\Resources\Siaw\SiawSistemasTinyResource;
 use App\Models\dbsiaw\SiawSistemas;
 use App\Services\Siaw\SiawSistemasService;
 use Essa\APIToolKit\Api\ApiResponse;
@@ -13,21 +15,29 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * @OA\Tag(name="Sistemas")
+ * @OA\Tag(name="siaw_sistemas", description="Sistemas")
  */
 class SiawSistemasController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, HandlesIndexResponse;
 
     public function __construct(private readonly SiawSistemasService $service) {}
 
     /**
      * @OA\Get(
      *      path="/api/siaw_sistemas",
-     *      tags={"Sistemas"},
+     *      tags={"siaw_sistemas"},
      *      summary="Sistemas (apps) que agrupan menús",
      *      security={{"bearerAuth":{}}},
-     *      @OA\Parameter(name="paginate", in="query", @OA\Schema(type="boolean")),
+     *      @OA\Parameter(name="paginate", in="query", description="true devuelve la respuesta paginada con `meta`", @OA\Schema(type="boolean")),
+     *      @OA\Parameter(name="page", in="query", @OA\Schema(type="integer")),
+     *      @OA\Parameter(name="per_page", in="query", @OA\Schema(type="integer")),
+     *      @OA\Parameter(name="tiny", in="query", description="true devuelve SiawSistemasTinySchema", @OA\Schema(type="boolean")),
+     *      @OA\Parameter(name="codigo", in="query", description="Filtro exacto por codigo", @OA\Schema(type="string")),
+     *      @OA\Parameter(name="activo", in="query", description="Filtro exacto por activo", @OA\Schema(type="boolean")),
+     *      @OA\Parameter(name="search", in="query", description="Búsqueda de texto libre", @OA\Schema(type="string")),
+     *      @OA\Parameter(name="sorts", in="query", description="Orden: campo o -campo (descendente)", @OA\Schema(type="string")),
+     *      @OA\Parameter(name="include", in="query", description="Relaciones a cargar, separadas por coma (ej. menus)", @OA\Schema(type="string")),
      *      @OA\Response(
      *          response=200,
      *          description="Sistemas registrados",
@@ -41,15 +51,21 @@ class SiawSistemasController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $data = $this->service->index($request->boolean('paginate'));
+        $paginate = $request->boolean('paginate');
 
-        return $this->responseSuccess('Sistemas obtenidos correctamente', SiawSistemasResource::collection($data));
+        $data = $this->service->index($paginate);
+
+        $resource = $request->boolean('tiny')
+            ? SiawSistemasTinyResource::class
+            : SiawSistemasResource::class;
+
+        return $this->responseIndex($data, $resource, $paginate, 'Sistemas obtenidos correctamente');
     }
 
     /**
      * @OA\Get(
      *      path="/api/siaw_sistemas/{siaw_sistema}",
-     *      tags={"Sistemas"},
+     *      tags={"siaw_sistemas"},
      *      summary="Ver un sistema por UUID",
      *      security={{"bearerAuth":{}}},
      *      @OA\Parameter(name="siaw_sistema", in="path", required=true, @OA\Schema(type="string", format="uuid")),
@@ -75,7 +91,7 @@ class SiawSistemasController extends Controller
     /**
      * @OA\Post(
      *      path="/api/siaw_sistemas",
-     *      tags={"Sistemas"},
+     *      tags={"siaw_sistemas"},
      *      summary="Registrar un sistema",
      *      description="Solo superuser/admin.",
      *      security={{"bearerAuth":{}}},
@@ -100,7 +116,7 @@ class SiawSistemasController extends Controller
      *      @OA\Response(response=422, description="Validación fallida")
      * )
      */
-    public function store(StoreRequest $request): JsonResponse
+    public function store(StoreSistemasRequest $request): JsonResponse
     {
         $model = $this->service->store($request->validated());
 
@@ -110,7 +126,7 @@ class SiawSistemasController extends Controller
     /**
      * @OA\Put(
      *      path="/api/siaw_sistemas/{siaw_sistema}",
-     *      tags={"Sistemas"},
+     *      tags={"siaw_sistemas"},
      *      summary="Actualizar un sistema",
      *      description="Solo superuser/admin.",
      *      security={{"bearerAuth":{}}},
@@ -134,7 +150,7 @@ class SiawSistemasController extends Controller
      *      @OA\Response(response=422, description="Validación fallida")
      * )
      */
-    public function update(UpdateRequest $request, SiawSistemas $siaw_sistema): JsonResponse
+    public function update(UpdateSistemasRequest $request, SiawSistemas $siaw_sistema): JsonResponse
     {
         $model = $this->service->update($siaw_sistema, $request->validated());
 
@@ -144,7 +160,7 @@ class SiawSistemasController extends Controller
     /**
      * @OA\Delete(
      *      path="/api/siaw_sistemas/{siaw_sistema}",
-     *      tags={"Sistemas"},
+     *      tags={"siaw_sistemas"},
      *      summary="Eliminar un sistema",
      *      description="Solo superuser/admin.",
      *      security={{"bearerAuth":{}}},

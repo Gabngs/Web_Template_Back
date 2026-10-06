@@ -6,8 +6,29 @@ use Essa\APIToolKit\Filters\QueryFilters;
 
 class SiawSistemasFilters extends QueryFilters
 {
-    protected array $allowedFilters  = ['codigo', 'activo'];
-    protected array $allowedSorts    = ['codigo', 'descripcion', 'created_at'];
-    protected array $allowedIncludes = ['menus'];
-    protected array $columnSearch    = ['codigo', 'descripcion'];
+    protected array $columnSearch = [
+        'codigo',
+        'descripcion',
+    ];
+
+    protected array $allowedFilters = [
+        'codigo',
+        'descripcion',
+        'activo',
+    ];
+
+    protected array $allowedIncludes = [
+        'menus',
+        'created_by',
+        'updated_by',
+        'deleted_by',
+    ];
+
+    protected array $allowedSorts = [
+        'codigo',
+        'descripcion',
+        'activo',
+        'created_at',
+        'updated_at',
+    ];
 }

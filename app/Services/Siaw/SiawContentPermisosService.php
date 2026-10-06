@@ -17,52 +17,81 @@ class SiawContentPermisosService extends AbstractModuleService
     // que usan los seeders (whereIn slug ['isSuperUser', 'isAdmin']).
     private const ROLES_SUPER = ['isSuperUser', 'isAdmin'];
 
+    public function __construct(protected CrudService $crud) {}
+
+    /**
+     * Relaciones eager-loaded en index/show, y en la respuesta de store/update/destroy.
+     * Centralizada acá — el Controller nunca decide qué relaciones cargar.
+     */
+    const RELATIONS = [
+        'contentModel', 'sistema',
+        'created_by', 'updated_by', 'deleted_by',
+    ];
+
+    /**
+     * Mapeo de campos UUID -> PKID.
+     * Clave: nombre del campo en $data que llega del frontend (UUID)
+     * Valor: clase del modelo donde se busca ese UUID para obtener su pkid
+     */
     protected array $uuidMapping = [
         'content_model_id' => SiawContentModel::class,
     ];
 
-    public function __construct(protected CrudService $crud) {}
-
     public function index(bool $paginate = false): mixed
     {
-        $query = SiawContentPermisos::useFilters()->orderBy('codename');
+        $query = SiawContentPermisos::useFilters()->with(self::RELATIONS)->orderBy('codename');
 
         if (request('app_model')) {
             $query->whereHas('contentModel', fn($q) => $q->where('app_model', request('app_model')));
         }
 
-        if (request()->boolean('with_model')) {
-            $query->with('contentModel');
-        }
-
-        return $paginate ? $query->dynamicPaginate() : $query->get();
+        return $paginate
+            ? $query->dynamicPaginate()
+            : $query->get();
     }
 
     public function show(Model $model): Model
     {
-        return $model->load(['contentModel']);
+        return $model->load(self::RELATIONS);
     }
 
     public function store(array $data): Model
     {
         $this->crud->mapUuidsToPkids($data, $this->uuidMapping);
         $data['sistema_id'] = $this->sistemaDelModelo($data['content_model_id'] ?? null);
-        $permiso = $this->crud->create(SiawContentPermisos::class, $data, 'crear_permiso');
+
+        $permiso = $this->crud->create(
+            SiawContentPermisos::class,
+            $data,
+            'crear_permiso',
+        );
 
         $this->asignarARolesSuper([$permiso->pkid]);
 
-        return $permiso;
+        return $permiso->load(self::RELATIONS);
     }
 
     public function update(Model $model, array $data): Model
     {
         $this->crud->mapUuidsToPkids($data, $this->uuidMapping);
-        return $this->crud->update($model, $data, 'actualizar_permiso');
+
+        $model = $this->crud->update(
+            $model,
+            $data,
+            'actualizar_permiso',
+        );
+
+        return $model->load(self::RELATIONS);
     }
 
     public function destroy(Model $model): Model
     {
-        return $this->crud->delete($model, 'eliminar_permiso');
+        $model->load(self::RELATIONS);
+
+        return $this->crud->delete(
+            $model,
+            'eliminar_permiso',
+        );
     }
 
     public function bulkCreate(array $data): array
@@ -89,7 +118,7 @@ class SiawContentPermisosService extends AbstractModuleService
 
         $this->asignarARolesSuper(array_map(fn ($m) => $m->pkid, $createdModels));
 
-        return $createdModels;
+        return array_map(fn ($m) => $m->load(self::RELATIONS), $createdModels);
     }
 
     /**

@@ -4,28 +4,30 @@ namespace App\Http\Requests\Siaw\Traits;
 
 trait SiawMenusRules
 {
-    protected function fieldRules(): array
+    use SiawMenusRulesFk, SiawSistemasRulesFk;
+
+    /**
+     * Reglas para campos que son FK (llegan como UUID desde el frontend).
+     * La validación 'exists' confirma que el UUID existe en la tabla antes de persistir; la regla de cada
+     * FK vive en su trait compartido (con la conexión y el soft delete de esa tabla).
+     * El mapeo UUID -> PKID lo hace el Service después (ver Mapeo UUID PKID.md).
+     *
+     * $required: 'required' (Store) o 'sometimes' (Update) -- lo único que cambia entre los dos
+     * FormRequests; las FK nullable de la tabla siguen siendo 'nullable' en ambos.
+     */
+    protected function getRelacionesRules(string $required = 'required'): array
     {
-        return [
-            'sistema_id'  => ['string', 'exists:dbsiaw.siaw_sistemas,id'],
-            'parent_id'   => ['nullable', 'string', 'exists:dbsiaw.siaw_menus,id'],
-            'titulo'      => ['string', 'max:100'],
-            'descripcion' => ['nullable', 'string', 'max:255'],
-            'ruta'        => ['nullable', 'string', 'max:255'],
-            'nombre_icon' => ['nullable', 'string', 'max:100'],
-            'orden'       => ['integer', 'min:0'],
-            'activo'      => ['boolean'],
-            'dashboard'   => ['boolean'],
-        ];
+        return array_merge(
+            $this->getSistemasRules('sistema_id', $required),
+            $this->getMenusRules('parent_id', 'nullable'),
+        );
     }
 
-    public function messages(): array
+    protected function getRelacionesMensajes(): array
     {
-        return [
-            'sistema_id.required' => 'El sistema es requerido.',
-            'sistema_id.exists'   => 'El sistema no existe.',
-            'parent_id.exists'    => 'El menú padre no existe.',
-            'titulo.required'     => 'El título es requerido.',
-        ];
+        return array_merge(
+            $this->getSistemasMensajes('sistema_id'),
+            $this->getMenusMensajes('parent_id'),
+        );
     }
 }

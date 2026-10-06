@@ -2,33 +2,30 @@
 
 namespace App\Http\Requests\Siaw\Traits;
 
-use Illuminate\Validation\Rule;
-
 trait SiawUsuariosRules
 {
-    protected function fieldRules(?string $ignoreId = null): array
-    {
-        $uniqueEmail = Rule::unique('dbsiaw.siaw_usuarios', 'email')->withoutTrashed();
-        if ($ignoreId) {
-            $uniqueEmail = $uniqueEmail->ignore($ignoreId, 'id');
-        }
+    use SiawRolesRulesFk;
 
-        return [
-            'nombre'    => ['string', 'max:100'],
-            'apellidos' => ['nullable', 'string', 'max:100'],
-            'email'     => ['string', 'max:150', $uniqueEmail],
-            'rol_id'    => ['nullable', 'uuid', 'exists:dbsiaw.siaw_roles,id'],
-            'activo'    => ['boolean'],
-        ];
+    /**
+     * Reglas para campos que son FK (llegan como UUID desde el frontend).
+     * La validación 'exists' confirma que el UUID existe en la tabla antes de persistir; la regla de cada
+     * FK vive en su trait compartido (con la conexión y el soft delete de esa tabla).
+     * El mapeo UUID -> PKID lo hace el Service después (ver Mapeo UUID PKID.md).
+     *
+     * $required: 'required' (Store) o 'sometimes' (Update) -- lo único que cambia entre los dos
+     * FormRequests; las FK nullable de la tabla siguen siendo 'nullable' en ambos.
+     */
+    protected function getRelacionesRules(string $required = 'required'): array
+    {
+        return array_merge(
+            $this->getRolesRules('rol_id', 'nullable'),
+        );
     }
 
-    public function messages(): array
+    protected function getRelacionesMensajes(): array
     {
-        return [
-            'nombre.required'   => 'El nombre es requerido.',
-            'email.required'    => 'El email es requerido.',
-            'email.unique'      => 'Ya existe un usuario con ese email.',
-            'rol_id.exists'     => 'El rol seleccionado no existe.',
-        ];
+        return array_merge(
+            $this->getRolesMensajes('rol_id'),
+        );
     }
 }

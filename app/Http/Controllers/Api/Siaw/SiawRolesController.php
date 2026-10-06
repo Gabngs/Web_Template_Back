@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api\Siaw;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Siaw\SiawRoles\StoreRequest;
-use App\Http\Requests\Siaw\SiawRoles\UpdateRequest;
+use App\Http\Traits\HandlesIndexResponse;
+use App\Http\Requests\Siaw\Roles\StoreRolesRequest;
+use App\Http\Requests\Siaw\Roles\UpdateRolesRequest;
 use App\Http\Resources\Siaw\SiawRolesResource;
+use App\Http\Resources\Siaw\SiawRolesTinyResource;
 use App\Models\dbsiaw\SiawRoles;
 use App\Services\Siaw\SiawRolesService;
 use Essa\APIToolKit\Api\ApiResponse;
@@ -13,21 +15,29 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * @OA\Tag(name="Roles")
+ * @OA\Tag(name="siaw_roles", description="Roles")
  */
 class SiawRolesController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, HandlesIndexResponse;
 
     public function __construct(private readonly SiawRolesService $service) {}
 
     /**
      * @OA\Get(
      *      path="/api/siaw_roles",
-     *      tags={"Roles"},
+     *      tags={"siaw_roles"},
      *      summary="Listar el catálogo de roles",
      *      security={{"bearerAuth":{}}},
-     *      @OA\Parameter(name="paginate", in="query", @OA\Schema(type="boolean")),
+     *      @OA\Parameter(name="paginate", in="query", description="true devuelve la respuesta paginada con `meta`", @OA\Schema(type="boolean")),
+     *      @OA\Parameter(name="page", in="query", @OA\Schema(type="integer")),
+     *      @OA\Parameter(name="per_page", in="query", @OA\Schema(type="integer")),
+     *      @OA\Parameter(name="tiny", in="query", description="true devuelve SiawRolesTinySchema", @OA\Schema(type="boolean")),
+     *      @OA\Parameter(name="slug", in="query", description="Filtro exacto por slug", @OA\Schema(type="string")),
+     *      @OA\Parameter(name="activo", in="query", description="Filtro exacto por activo", @OA\Schema(type="boolean")),
+     *      @OA\Parameter(name="search", in="query", description="Búsqueda de texto libre", @OA\Schema(type="string")),
+     *      @OA\Parameter(name="sorts", in="query", description="Orden: campo o -campo (descendente)", @OA\Schema(type="string")),
+     *      @OA\Parameter(name="include", in="query", description="Relaciones a cargar, separadas por coma", @OA\Schema(type="string")),
      *      @OA\Response(
      *          response=200,
      *          description="Roles registrados",
@@ -41,15 +51,21 @@ class SiawRolesController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $data = $this->service->index($request->boolean('paginate'));
+        $paginate = $request->boolean('paginate');
 
-        return $this->responseSuccess('Roles obtenidos correctamente', SiawRolesResource::collection($data));
+        $data = $this->service->index($paginate);
+
+        $resource = $request->boolean('tiny')
+            ? SiawRolesTinyResource::class
+            : SiawRolesResource::class;
+
+        return $this->responseIndex($data, $resource, $paginate, 'Roles obtenidos correctamente');
     }
 
     /**
      * @OA\Get(
      *      path="/api/siaw_roles/{siaw_role}",
-     *      tags={"Roles"},
+     *      tags={"siaw_roles"},
      *      summary="Ver un rol por UUID",
      *      security={{"bearerAuth":{}}},
      *      @OA\Parameter(name="siaw_role", in="path", required=true, @OA\Schema(type="string", format="uuid")),
@@ -75,7 +91,7 @@ class SiawRolesController extends Controller
     /**
      * @OA\Post(
      *      path="/api/siaw_roles",
-     *      tags={"Roles"},
+     *      tags={"siaw_roles"},
      *      summary="Registrar un rol",
      *      description="Solo superuser/admin.",
      *      security={{"bearerAuth":{}}},
@@ -102,7 +118,7 @@ class SiawRolesController extends Controller
      *      @OA\Response(response=422, description="Validación fallida")
      * )
      */
-    public function store(StoreRequest $request): JsonResponse
+    public function store(StoreRolesRequest $request): JsonResponse
     {
         $model = $this->service->store($request->validated());
 
@@ -112,7 +128,7 @@ class SiawRolesController extends Controller
     /**
      * @OA\Put(
      *      path="/api/siaw_roles/{siaw_role}",
-     *      tags={"Roles"},
+     *      tags={"siaw_roles"},
      *      summary="Actualizar un rol",
      *      description="Solo superuser/admin.",
      *      security={{"bearerAuth":{}}},
@@ -138,7 +154,7 @@ class SiawRolesController extends Controller
      *      @OA\Response(response=422, description="Validación fallida")
      * )
      */
-    public function update(UpdateRequest $request, SiawRoles $siaw_role): JsonResponse
+    public function update(UpdateRolesRequest $request, SiawRoles $siaw_role): JsonResponse
     {
         $model = $this->service->update($siaw_role, $request->validated());
 
@@ -148,7 +164,7 @@ class SiawRolesController extends Controller
     /**
      * @OA\Delete(
      *      path="/api/siaw_roles/{siaw_role}",
-     *      tags={"Roles"},
+     *      tags={"siaw_roles"},
      *      summary="Eliminar un rol",
      *      description="Solo superuser/admin.",
      *      security={{"bearerAuth":{}}},

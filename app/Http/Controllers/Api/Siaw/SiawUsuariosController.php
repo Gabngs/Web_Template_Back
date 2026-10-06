@@ -3,20 +3,22 @@
 namespace App\Http\Controllers\Api\Siaw;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Siaw\SiawUsuarios\StoreSiawUsuarioRequest;
-use App\Http\Requests\Siaw\SiawUsuarios\UpdateSiawUsuarioRequest;
+use App\Http\Traits\HandlesIndexResponse;
+use App\Http\Requests\Siaw\Usuarios\StoreUsuariosRequest;
+use App\Http\Requests\Siaw\Usuarios\UpdateUsuariosRequest;
 use App\Http\Resources\Siaw\SiawUsuarioResource;
+use App\Http\Resources\Siaw\SiawUsuarioTinyResource;
 use App\Models\dbsiaw\SiawUsuarios;
 use App\Services\Siaw\SiawUsuariosService;
 use Essa\APIToolKit\Api\ApiResponse;
 use Illuminate\Http\Request;
 
 /**
- * @OA\Tag(name="Usuarios")
+ * @OA\Tag(name="siaw_usuarios", description="Usuarios")
  */
 class SiawUsuariosController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, HandlesIndexResponse;
 
     public function __construct(protected SiawUsuariosService $service) {}
 
@@ -24,10 +26,18 @@ class SiawUsuariosController extends Controller
      * @OA\Get(
      *      path="/api/siaw_usuarios",
      *      operationId="indexSiawUsuarios",
-     *      tags={"Usuarios"},
+     *      tags={"siaw_usuarios"},
      *      summary="Listar usuarios del sistema",
      *      security={{"bearerAuth":{}}},
-     *      @OA\Parameter(name="paginate", in="query", @OA\Schema(type="boolean")),
+     *      @OA\Parameter(name="paginate", in="query", description="true devuelve la respuesta paginada con `meta`", @OA\Schema(type="boolean")),
+     *      @OA\Parameter(name="page", in="query", @OA\Schema(type="integer")),
+     *      @OA\Parameter(name="per_page", in="query", @OA\Schema(type="integer")),
+     *      @OA\Parameter(name="tiny", in="query", description="true devuelve SiawUsuarioTinySchema", @OA\Schema(type="boolean")),
+     *      @OA\Parameter(name="rol_id", in="query", description="Filtro exacto por rol_id", @OA\Schema(type="string", format="uuid")),
+     *      @OA\Parameter(name="activo", in="query", description="Filtro exacto por activo", @OA\Schema(type="boolean")),
+     *      @OA\Parameter(name="search", in="query", description="Búsqueda de texto libre", @OA\Schema(type="string")),
+     *      @OA\Parameter(name="sorts", in="query", description="Orden: campo o -campo (descendente)", @OA\Schema(type="string")),
+     *      @OA\Parameter(name="include", in="query", description="Relaciones a cargar, separadas por coma", @OA\Schema(type="string")),
      *      @OA\Response(
      *          response=200,
      *          description="Usuarios registrados",
@@ -42,40 +52,21 @@ class SiawUsuariosController extends Controller
     public function index(Request $request)
     {
         $paginate = $request->boolean('paginate');
-        $data     = $this->service->index($paginate);
 
-        if (! $paginate) {
-            return $this->responseSuccess(
-                'Usuarios obtenidos correctamente',
-                SiawUsuarioResource::collection($data)
-            );
-        }
+        $data = $this->service->index($paginate);
 
-        // $data es un LengthAwarePaginator: se transforman solo los items (array
-        // plano) y la metadata de paginación viaja en 'meta', sibling de 'data' —
-        // ver ApiResponse#Paginación sin duplicar `data`.
-        $response = $this->responseSuccess(
-            'Usuarios obtenidos correctamente',
-            SiawUsuarioResource::collection($data->items())
-        );
+        $resource = $request->boolean('tiny')
+            ? SiawUsuarioTinyResource::class
+            : SiawUsuarioResource::class;
 
-        return $response->setData(array_merge($response->getData(true), [
-            'meta' => [
-                'current_page' => $data->currentPage(),
-                'last_page'    => $data->lastPage(),
-                'per_page'     => $data->perPage(),
-                'total'        => $data->total(),
-                'from'         => $data->firstItem(),
-                'to'           => $data->lastItem(),
-            ],
-        ]));
+        return $this->responseIndex($data, $resource, $paginate, 'Usuarios obtenidos correctamente');
     }
 
     /**
      * @OA\Get(
      *      path="/api/siaw_usuarios/{siaw_usuario}",
      *      operationId="showSiawUsuario",
-     *      tags={"Usuarios"},
+     *      tags={"siaw_usuarios"},
      *      summary="Ver un usuario por UUID",
      *      security={{"bearerAuth":{}}},
      *      @OA\Parameter(name="siaw_usuario", in="path", required=true, @OA\Schema(type="string")),
@@ -105,7 +96,7 @@ class SiawUsuariosController extends Controller
      * @OA\Post(
      *      path="/api/siaw_usuarios",
      *      operationId="storeSiawUsuario",
-     *      tags={"Usuarios"},
+     *      tags={"siaw_usuarios"},
      *      summary="Registrar un nuevo usuario — solo superuser/admin",
      *      description="El backend genera un password temporal aleatorio y lo envía por correo — no se recibe ni se devuelve en texto plano.",
      *      security={{"bearerAuth":{}}},
@@ -131,7 +122,7 @@ class SiawUsuariosController extends Controller
      *      @OA\Response(response=422, description="Validación fallida")
      * )
      */
-    public function store(StoreSiawUsuarioRequest $request)
+    public function store(StoreUsuariosRequest $request)
     {
         $model = $this->service->store($request->validated());
 
@@ -145,7 +136,7 @@ class SiawUsuariosController extends Controller
      * @OA\Put(
      *      path="/api/siaw_usuarios/{siaw_usuario}",
      *      operationId="updateSiawUsuario",
-     *      tags={"Usuarios"},
+     *      tags={"siaw_usuarios"},
      *      summary="Actualizar un usuario — solo superuser/admin",
      *      security={{"bearerAuth":{}}},
      *      @OA\Parameter(name="siaw_usuario", in="path", required=true, @OA\Schema(type="string")),
@@ -161,7 +152,7 @@ class SiawUsuariosController extends Controller
      *      @OA\Response(response=422, description="Validación fallida")
      * )
      */
-    public function update(UpdateSiawUsuarioRequest $request, SiawUsuarios $siaw_usuario)
+    public function update(UpdateUsuariosRequest $request, SiawUsuarios $siaw_usuario)
     {
         $model = $this->service->update($siaw_usuario, $request->validated());
 
@@ -175,7 +166,7 @@ class SiawUsuariosController extends Controller
      * @OA\Delete(
      *      path="/api/siaw_usuarios/{siaw_usuario}",
      *      operationId="destroySiawUsuario",
-     *      tags={"Usuarios"},
+     *      tags={"siaw_usuarios"},
      *      summary="Eliminar (soft-delete) un usuario — solo superuser/admin",
      *      security={{"bearerAuth":{}}},
      *      @OA\Parameter(name="siaw_usuario", in="path", required=true, @OA\Schema(type="string")),

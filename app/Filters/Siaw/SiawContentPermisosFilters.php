@@ -2,21 +2,46 @@
 
 namespace App\Filters\Siaw;
 
-use Essa\APIToolKit\Filters\QueryFilters;
 use App\Models\dbsiaw\SiawContentModel;
 use App\Models\dbsiaw\SiawSistemas;
+use Essa\APIToolKit\Filters\QueryFilters;
 
 class SiawContentPermisosFilters extends QueryFilters
 {
-    protected array $allowedFilters  = ['codename'];
-    protected array $allowedSorts    = ['codename', 'created_at'];
-    protected array $allowedIncludes = ['contentModel', 'sistema'];
-    protected array $columnSearch    = ['codename', 'desc'];
+    protected array $columnSearch = [
+        'codename',
+        'desc',
+    ];
+
+    protected array $allowedFilters = [
+        'codename',
+        'desc',
+    ];
+
+    protected array $allowedIncludes = [
+        'contentModel',
+        'sistema',
+        'created_by',
+        'updated_by',
+        'deleted_by',
+    ];
+
+    protected array $allowedSorts = [
+        'codename',
+        'desc',
+        'created_at',
+        'updated_at',
+    ];
 
     public function content_model_id($value)
     {
-        $cmpkid = SiawContentModel::where('id', $value)->value('pkid');
-        return $this->builder->where('content_model_id', $cmpkid);
+        if ($value === null || $value === '') {
+            return $this->builder;
+        }
+
+        $pkid = SiawContentModel::where('id', $value)->value('pkid');
+
+        return $this->builder->where('content_model_id', $pkid ?? 0);
     }
 
     /**
@@ -26,8 +51,12 @@ class SiawContentPermisosFilters extends QueryFilters
      */
     public function sistema_id($value)
     {
-        $pkid = SiawSistemas::where('id', $value)->value('pkid');
-        return $this->builder->where('sistema_id', $pkid);
-    }
+        if ($value === null || $value === '') {
+            return $this->builder;
+        }
 
+        $pkid = SiawSistemas::where('id', $value)->value('pkid');
+
+        return $this->builder->where('sistema_id', $pkid ?? 0);
+    }
 }
