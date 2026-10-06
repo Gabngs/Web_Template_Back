@@ -101,6 +101,15 @@ choose_port() {
     CHOSEN_PORT="$port"
 }
 choose_port APP_PORT        8844 "la aplicación"    "$APP_PORT_ARG"
+# Swagger arma las URLs de "Try it out" con L5_SWAGGER_CONST_HOST: si queda en
+# otro puerto que APP_PORT, el login (y todo) falla con "Failed to fetch".
+SWAGGER_HOST="http://localhost:${CHOSEN_PORT}"
+if grep -q "^L5_SWAGGER_CONST_HOST=" .env; then
+    sed -i "s|^L5_SWAGGER_CONST_HOST=.*|L5_SWAGGER_CONST_HOST=${SWAGGER_HOST}|" .env
+else
+    printf '%s=%s
+' L5_SWAGGER_CONST_HOST "$SWAGGER_HOST" >> .env
+fi
 choose_port FORWARD_DB_PORT 3322 "la base de datos" "$DB_PORT_ARG"
 
 # 2. Instalar dependencias Composer ANTES de construir la imagen.
@@ -126,8 +135,10 @@ for svc in lcs_laravel_backend lcs_queue lcs_scheduler lcs_db lcs_redis; do
     [ "$(docker inspect -f '{{.State.Running}}' "$svc" 2>/dev/null || echo false)" = "true" ] || ALREADY_UP=0
 done
 if [ "$ALREADY_UP" = "1" ]; then
-    want_app="$(grep '^APP_PORT=' .env | cut -d'=' -f2 | tr -d ' ')"
-    want_db="$(grep '^FORWARD_DB_PORT=' .env | cut -d'=' -f2 | tr -d ' ')"
+    want_app="$(grep '^APP_PORT=' .env | cut -d'=' -f2 | tr -d ' 
+')"
+    want_db="$(grep '^FORWARD_DB_PORT=' .env | cut -d'=' -f2 | tr -d ' 
+')"
     have_app="$(docker compose port lcs_laravel_backend 80 2>/dev/null | awk -F: '{print $NF}')"
     have_db="$(docker compose port lcs_db 3306 2>/dev/null | awk -F: '{print $NF}')"
     [ "$have_app" = "$want_app" ] && [ "$have_db" = "$want_db" ] || ALREADY_UP=0
