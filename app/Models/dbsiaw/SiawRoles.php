@@ -5,6 +5,7 @@ namespace App\Models\dbsiaw;
 use App\Filters\Siaw\SiawRolesFilters;
 use Essa\APIToolKit\Filters\Filterable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class SiawRoles extends Model

@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 
 class RouteServiceProvider extends ServiceProvider
 {
@@ -23,7 +24,7 @@ class RouteServiceProvider extends ServiceProvider
         $files = glob(base_path('routes/modules') . DIRECTORY_SEPARATOR . '*.php') ?: [];
 
         Route::prefix('api')
-            ->middleware(['session.key', 'auth:sanctum', 'throttle:api', 'forzar.cambio'])
+            ->middleware(['session.key', 'auth:sanctum', SubstituteBindings::class, 'throttle:api', 'forzar.cambio'])
             ->group(function () use ($files) {
                 foreach ($files as $file) {
                     require $file;

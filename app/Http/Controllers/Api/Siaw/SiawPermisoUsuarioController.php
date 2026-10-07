@@ -9,6 +9,7 @@ use App\Http\Requests\Siaw\SiawPermisoUsuario\UpdateRequest;
 use App\Http\Resources\Siaw\SiawPermisoUsuarioResource;
 use App\Models\dbsiaw\SiawPermisoUsuario;
 use App\Services\Siaw\SiawPermisoUsuarioService;
+use App\Http\Traits\HandlesIndexResponse;
 use Essa\APIToolKit\Api\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,7 +19,7 @@ use Illuminate\Http\Request;
  */
 class SiawPermisoUsuarioController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, HandlesIndexResponse;
 
     public function __construct(private readonly SiawPermisoUsuarioService $service) {}
 
@@ -40,11 +41,11 @@ class SiawPermisoUsuarioController extends Controller
      *      )
      * )
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request)
     {
-        $data = $this->service->index($request->boolean('paginate'));
+        $paginate = $request->boolean('paginate');
 
-        return $this->responseSuccess('Asignaciones obtenidas correctamente', SiawPermisoUsuarioResource::collection($data));
+        return $this->responseIndex($this->service->index($paginate), SiawPermisoUsuarioResource::class, $paginate, 'Asignaciones obtenidas correctamente');
     }
 
     /**

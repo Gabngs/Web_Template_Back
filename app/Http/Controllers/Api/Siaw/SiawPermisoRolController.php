@@ -9,6 +9,7 @@ use App\Http\Requests\Siaw\SiawPermisoRol\UpdateRequest;
 use App\Http\Resources\Siaw\SiawPermisoRolResource;
 use App\Models\dbsiaw\SiawPermisoRol;
 use App\Services\Siaw\SiawPermisoRolService;
+use App\Http\Traits\HandlesIndexResponse;
 use Essa\APIToolKit\Api\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,7 +19,7 @@ use Illuminate\Http\Request;
  */
 class SiawPermisoRolController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, HandlesIndexResponse;
 
     public function __construct(private readonly SiawPermisoRolService $service) {}
 
@@ -40,11 +41,11 @@ class SiawPermisoRolController extends Controller
      *      )
      * )
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request)
     {
-        $data = $this->service->index($request->boolean('paginate'));
+        $paginate = $request->boolean('paginate');
 
-        return $this->responseSuccess('Asignaciones obtenidas correctamente', SiawPermisoRolResource::collection($data));
+        return $this->responseIndex($this->service->index($paginate), SiawPermisoRolResource::class, $paginate, 'Asignaciones obtenidas correctamente');
     }
 
     /**

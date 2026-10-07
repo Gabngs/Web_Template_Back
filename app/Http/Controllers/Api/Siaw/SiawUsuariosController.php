@@ -139,7 +139,18 @@ class SiawUsuariosController extends Controller
      *      tags={"siaw_usuarios"},
      *      summary="Actualizar un usuario — solo superuser/admin",
      *      security={{"bearerAuth":{}}},
-     *      @OA\Parameter(name="siaw_usuario", in="path", required=true, @OA\Schema(type="string")),
+     *      @OA\Parameter(name="siaw_usuario", in="path", required=true, @OA\Schema(type="string", format="uuid")),
+     *      @OA\RequestBody(
+     *          required=true,
+     *          description="Todos los campos son opcionales (sometimes): enviar solo los que cambian. El password no se acepta aquí.",
+     *          @OA\JsonContent(
+     *              @OA\Property(property="nombre", type="string", maxLength=100),
+     *              @OA\Property(property="apellidos", type="string", maxLength=100, nullable=true),
+     *              @OA\Property(property="email", type="string", format="email", maxLength=150),
+     *              @OA\Property(property="activo", type="boolean"),
+     *              @OA\Property(property="rol_id", type="string", format="uuid")
+     *          )
+     *      ),
      *      @OA\Response(
      *          response=200,
      *          description="Usuario actualizado",

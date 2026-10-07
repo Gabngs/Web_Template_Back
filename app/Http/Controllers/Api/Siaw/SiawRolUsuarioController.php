@@ -9,6 +9,7 @@ use App\Http\Requests\Siaw\SiawRolUsuario\UpdateRequest;
 use App\Http\Resources\Siaw\SiawRolUsuarioResource;
 use App\Models\dbsiaw\SiawRolUsuario;
 use App\Services\Siaw\SiawRolUsuarioService;
+use App\Http\Traits\HandlesIndexResponse;
 use Essa\APIToolKit\Api\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,7 +19,7 @@ use Illuminate\Http\Request;
  */
 class SiawRolUsuarioController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, HandlesIndexResponse;
 
     public function __construct(private readonly SiawRolUsuarioService $service) {}
 
@@ -40,11 +41,11 @@ class SiawRolUsuarioController extends Controller
      *      )
      * )
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request)
     {
-        $data = $this->service->index($request->boolean('paginate'));
+        $paginate = $request->boolean('paginate');
 
-        return $this->responseSuccess('Asignaciones obtenidas correctamente', SiawRolUsuarioResource::collection($data));
+        return $this->responseIndex($this->service->index($paginate), SiawRolUsuarioResource::class, $paginate, 'Asignaciones obtenidas correctamente');
     }
 
     /**
