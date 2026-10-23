@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ── Stage 1: Build ────────────────────────────────────────────────────────────
-FROM php:8.4-fpm-alpine AS build
+FROM php:8.4.27-fpm-alpine AS build
 
 RUN apk add --no-cache git unzip libpng-dev libzip-dev freetype-dev libjpeg-turbo-dev autoconf g++ make \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
@@ -29,7 +29,7 @@ COPY . .
 RUN composer dump-autoload --no-dev --optimize
 
 # ── Stage 2: Runtime ──────────────────────────────────────────────────────────
-FROM php:8.4-fpm-alpine AS runtime
+FROM php:8.4.27-fpm-alpine AS runtime
 
 RUN apk add --no-cache nginx supervisor bash libpng libzip freetype libjpeg-turbo \
     && mkdir -p /run/nginx /var/log/supervisor

@@ -6,20 +6,16 @@ Ver también, en el Vault (`Template Estandar Backend/Despliegue/`): `Checklist 
 
 ---
 
-## 0. (Opcional) Renombrar el prefijo `lcs` a tu proyecto
+## 0. Proyecto nuevo a partir de esta base: `bash start.sh --new`
 
-Este repo trae el prefijo `lcs` / conexión `dblcs` como base neutra. Si vas a arrancar un producto real con nombre propio (ej. `crm_`, `mdt_`), renombrar antes de tocar nada más:
+No se renombra nada a mano. `start.sh --new` pide el nombre del sistema, el **prefijo**, los puertos de localhost y la URL del repo vacío del proyecto nuevo, y deja todo listo para empezar con los modelos de negocio:
 
-| Dónde | Qué cambiar |
-|---|---|
-| `config/database.php` | conexión `dblcs` → `db{prefijo}`, envs `DB_LCS_*` → `DB_{PREFIJO}_*` |
-| `.env` / `.env.example` | mismas variables `DB_LCS_*` |
-| `docker-compose.yml`, `setup.sh`, `start.sh` | nombres de servicio `lcs_*` → `{prefijo}_*` |
-| `k8s/*.yaml`, `.github/workflows/deploy.yml` | `lcs-prod`, `lcs-laravel-prod`, `lcs-env`, `ghcr.io/.../lcs`, etc. |
-| `database/docker-init/01_init_databases.sql`, `k8s/01-mariadb.yaml` | `db_lcs` → `db_{prefijo}` |
-| `config/sistemas.php`, `SiawSistemasSeeder` | código de sistema `'LCS'` → el que corresponda |
+1. Copia la base (SIAW + auth + catálogo) a una carpeta nueva y renombra contenido y rutas `lcs`/`Lcs`/`LCS` → prefijo (conexión `db{prefijo}`, base `db_{prefijo}`, contenedores `{prefijo}_*`, `DB_{PREFIJO}_*`, k8s, workflows). `dbsiaw` y `dbsincro` no cambian.
+2. Genera el `.env` con los puertos elegidos, hace `git init` + commit inicial + push al repo indicado.
+3. Levanta todo (`--up`): contenedores, bases, migraciones, seeders, claves RSA, Swagger.
+4. Al final imprime (y guarda en `secrets-prod.sh`, gitignored) los comandos `gh secret set` / `kubectl` ya con lo generado (passwords de BD, APP_KEY); solo hay que completar kubeconfig, PAT de ghcr, dominio y API key de Resend.
 
-`dbsiaw` y `dbsincro` **no cambian** — son las dos conexiones fijas del estándar, compartidas por convención en todo proyecto que lo use.
+`bash start.sh --up` (default) solo levanta un proyecto ya clonado, sin preguntar nada. `bash start.sh --help` lista los flags.
 
 ---
 

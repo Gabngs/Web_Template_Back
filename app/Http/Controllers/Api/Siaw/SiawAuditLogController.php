@@ -99,9 +99,9 @@ class SiawAuditLogController extends Controller
      *          @OA\JsonContent(
      *              required={ "nombre_proceso", "tipo_proceso", "estado_proceso", "origen" },
      *              @OA\Property(property="nombre_proceso", type="string", maxLength=255),
-     *              @OA\Property(property="tipo_proceso", type="integer"),
-     *              @OA\Property(property="estado_proceso", type="integer"),
-     *              @OA\Property(property="origen", type="integer"),
+     *              @OA\Property(property="tipo_proceso", type="integer", minimum=1, maximum=4),
+     *              @OA\Property(property="estado_proceso", type="integer", minimum=1, maximum=2),
+     *              @OA\Property(property="origen", type="integer", minimum=1, maximum=2),
      *              @OA\Property(property="modelo_afectado", type="string", maxLength=255),
      *              @OA\Property(property="registro_id", type="string", maxLength=255),
      *              @OA\Property(property="input", type="object"),
@@ -141,9 +141,9 @@ class SiawAuditLogController extends Controller
      *      @OA\RequestBody(
      *          @OA\JsonContent(
      *              @OA\Property(property="nombre_proceso", type="string", maxLength=255),
-     *              @OA\Property(property="tipo_proceso", type="integer"),
-     *              @OA\Property(property="estado_proceso", type="integer"),
-     *              @OA\Property(property="origen", type="integer"),
+     *              @OA\Property(property="tipo_proceso", type="integer", minimum=1, maximum=4),
+     *              @OA\Property(property="estado_proceso", type="integer", minimum=1, maximum=2),
+     *              @OA\Property(property="origen", type="integer", minimum=1, maximum=2),
      *              @OA\Property(property="modelo_afectado", type="string", maxLength=255),
      *              @OA\Property(property="registro_id", type="string", maxLength=255),
      *              @OA\Property(property="input", type="object"),

@@ -13,7 +13,11 @@ Backend base en Laravel 12: módulo **SIAW** (usuarios, roles, permisos, menús)
 
 ```bash
 bash setup.sh   # .env interactivo (opcional, o copiá .env.example a mano) — se autoelimina
-bash start.sh   # build + up + migrate + seed + claves RSA + swagger
+bash start.sh --up  # build + up + migrate + seed + claves RSA + swagger
+
+# Proyecto NUEVO a partir de esta base (SIAW + catálogo): pide nombre, prefijo, puertos y repo remoto,
+# genera la carpeta con todo renombrado + .env, hace commit/push inicial y lo levanta.
+bash start.sh --new   # ./start.sh --help para los flags (--name, --prefix, --repo, --no-up, ...)
 ```
 
 - API: http://localhost:8844

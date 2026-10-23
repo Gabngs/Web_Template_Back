@@ -28,3 +28,4 @@ Thumbs.db
 
 # Resultados de tests/api_test.py
 /tests/results/
+/secrets-prod.sh

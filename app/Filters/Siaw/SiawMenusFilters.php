@@ -34,6 +34,7 @@ class SiawMenusFilters extends QueryFilters
     protected array $allowedSorts = [
         'orden',
         'titulo',
+        'descripcion',
         'activo',
         'created_at',
         'updated_at',
